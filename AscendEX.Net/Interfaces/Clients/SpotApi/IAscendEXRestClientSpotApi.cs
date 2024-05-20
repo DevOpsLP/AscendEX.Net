@@ -11,5 +11,6 @@ public interface IAscendEXRestClientSpotApi
         IAscendEXRestClientSpotApiAccount Account { get; }
         IAscendEXRestClientSpotApiWallet Wallet { get; }
 
+        IAscendEXRestClientSpotApiExchangeData ExchangeData{ get; }
     void SetApiCredentials<T>(T credentials) where T : ApiCredentials;
 }

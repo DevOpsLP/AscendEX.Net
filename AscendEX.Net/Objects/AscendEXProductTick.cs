@@ -1,61 +1,42 @@
-using CryptoExchange.Net.CommonObjects;
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
-namespace AscendEX.Net.Objects;
-
-public class AscendEXProductTick : Ticker
+namespace AscendEX.Net.Objects
 {
-    /// <summary>
-    /// Gets or sets the trade ID.
-    /// </summary>
-    [JsonProperty("trade_id")]
-    public long TradeId { get; set; }
+    public class AscendEXProductTickResponse
+    {
+        [JsonProperty("code")]
+        public int Code { get; set; }
 
-    /// <summary>
-    /// Gets or sets the price of the trade.
-    /// </summary>
-    [JsonProperty("price")]
-    public string Price { get; set; }
+        [JsonProperty("data")]
+        [JsonConverter(typeof(SingleOrArrayConverter<AscendEXProductTick>))]
+        public List<AscendEXProductTick> Data { get; set; }
+    }
 
-    /// <summary>
-    /// Gets or sets the size of the trade.
-    /// </summary>
-    [JsonProperty("size")]
-    public string Size { get; set; }
+    public class AscendEXProductTick
+    {
+        [JsonProperty("symbol")]
+        public string Symbol { get; set; }
 
-    /// <summary>
-    /// Gets or sets the timestamp of the trade.
-    /// </summary>
-    [JsonProperty("time")]
-    public DateTime Time { get; set; }
+        [JsonProperty("open")]
+        public string Open { get; set; }
 
-    /// <summary>
-    /// Gets or sets the bid price.
-    /// </summary>
-    [JsonProperty("bid")]
-    public string Bid { get; set; }
+        [JsonProperty("close")]
+        public string Close { get; set; }
 
-    /// <summary>
-    /// Gets or sets the ask price.
-    /// </summary>
-    [JsonProperty("ask")]
-    public string Ask { get; set; }
+        [JsonProperty("high")]
+        public string High { get; set; }
 
-    /// <summary>
-    /// Gets or sets the trading volume.
-    /// </summary>
-    [JsonProperty("volume")]
-    public string Volume { get; set; }
+        [JsonProperty("low")]
+        public string Low { get; set; }
 
-    /// <summary>
-    /// Gets or sets the RFQ (Request for Quote) volume.
-    /// </summary>
-    [JsonProperty("rfq_volume")]
-    public string RfqVolume { get; set; }
+        [JsonProperty("volume")]
+        public string Volume { get; set; }
 
-    /// <summary>
-    /// Gets or sets the conversions volume.
-    /// </summary>
-    [JsonProperty("conversions_volume")]
-    public string ConversionsVolume { get; set; }
+        [JsonProperty("ask")]
+        public List<string> Ask { get; set; }
+
+        [JsonProperty("bid")]
+        public List<string> Bid { get; set; }
+    }
 }

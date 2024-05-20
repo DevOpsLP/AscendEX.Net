@@ -1,23 +1,56 @@
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
-namespace AscendEX.Net.Objects.Models.Spot;
-
-public class AscendEXCurrencyDetails
+namespace AscendEX.Net.Objects
 {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        [JsonProperty("min_size")]
-        public string MinSize { get; set; }
-        public string Status { get; set; }
-        public string Message { get; set; }
-        [JsonProperty("max_precision")]
-        public string MaxPrecision { get; set; }
-        [JsonProperty("convertible_to")]
-        public List<string> ConvertibleTo { get; set; }
-        //public Details details { get; set; }
-        [JsonProperty("default_network")]
-        public string DefaultNetwork { get; set; }
-        //public List<SupportedNetwork> supported_networks { get; set; }
-        [JsonProperty("display_name")]
-        public string DisplayName { get; set; }
+    public class AscendEXCurrencyDetailsResponse
+    {
+        [JsonProperty("code")]
+        public int Code { get; set; }
+
+        [JsonProperty("data")]
+        public List<AscendEXCurrencyDetails> Data { get; set; }
+    }
+
+    public class AscendEXCurrencyDetails
+    {
+        [JsonProperty("assetCode")]
+        public string AssetCode { get; set; }
+
+        [JsonProperty("assetName")]
+        public string AssetName { get; set; }
+
+        [JsonProperty("precisionScale")]
+        public int PrecisionScale { get; set; }
+
+        [JsonProperty("nativeScale")]
+        public int NativeScale { get; set; }
+
+        [JsonProperty("blockChain")]
+        public List<BlockChainInfo> BlockChain { get; set; }
+
+        public class BlockChainInfo
+        {
+            [JsonProperty("chainName")]
+            public string ChainName { get; set; }
+
+            [JsonProperty("withdrawFee")]
+            public string WithdrawFee { get; set; }
+
+            [JsonProperty("allowDeposit")]
+            public bool AllowDeposit { get; set; }
+
+            [JsonProperty("allowWithdraw")]
+            public bool AllowWithdraw { get; set; }
+
+            [JsonProperty("minDepositAmt")]
+            public string MinDepositAmt { get; set; }
+
+            [JsonProperty("minWithdrawal")]
+            public string MinWithdrawal { get; set; }
+
+            [JsonProperty("numConfirmations")]
+            public int NumConfirmations { get; set; }
+        }
+    }
 }

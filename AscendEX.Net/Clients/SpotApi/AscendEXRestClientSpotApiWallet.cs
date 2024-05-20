@@ -12,6 +12,7 @@ namespace AscendEX.Net.Clients.SpotApi
     public class AscendEXRestClientSpotApiWallet : IAscendEXRestClientSpotApiWallet
     {
         private const string DepositAddressEndpoint = "/api/pro/v1/wallet/deposit/address";
+        private const string WalletTransactionHistoryEndpoint = "/api/pro/v1/wallet/transactions";
 
         private readonly ILogger _logger;
         private readonly AscendEXRestClientSpotApi _baseClient;
@@ -38,6 +39,23 @@ namespace AscendEX.Net.Clients.SpotApi
                 _baseClient.GetUrl(DepositAddressEndpoint),
                 HttpMethod.Get, ct, parameters, true).ConfigureAwait(false);
         }
+
+        public async Task<WebCallResult<AscendEXWalletTransactionHistory>> GetWalletTransactionHistoryAsync(string asset, string? blockchain = null, CancellationToken ct = default)
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                { "asset", asset }
+            };
+                    if (!string.IsNullOrEmpty(blockchain))
+                    {
+                        parameters.Add("blockchain", blockchain);
+                    }
+
+            return await _baseClient.SendRequestInternal<AscendEXWalletTransactionHistory>(
+                _baseClient.GetUrl(WalletTransactionHistoryEndpoint),
+                HttpMethod.Get, ct, parameters, true).ConfigureAwait(false);
+        }
+
     }
 
 

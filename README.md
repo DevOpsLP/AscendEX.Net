@@ -81,6 +81,34 @@ var client = new AscendEXRestClient(options =>
 
 var accountInfo = await client.SpotApi.Account.GetAccountInfoAsync();
 ```
+## ExchangeData Functions and Endpoints
+
+### GetCurrenciesAsync
+- **Endpoint:** `/api/pro/v2/assets`
+- **HTTP Method:** GET
+- **Parameters:** None
+- **Description:** Retrieves a list of all currencies supported by the exchange.
+
+### GetProductsAsync
+- **Endpoint:** `/api/pro/v1/{accountCategory}/products`
+- **HTTP Method:** GET
+- **Parameters:**
+  - `accountCategory` (string): The category of the account (e.g., `cash`, `margin`).
+- **Description:** Retrieves a list of all products for the specified account category.
+
+### GetTickerAsync
+- **Endpoint:** `/api/pro/v1/spot/ticker`
+- **HTTP Method:** GET
+- **Parameters:**
+  - `symbol` (optional, string): The symbol to fetch the ticker for (e.g., `BTC/USDT`). If not provided, fetches tickers for all symbols.
+- **Description:** Retrieves the ticker information for the specified symbol or all symbols if none is provided.
+
+### GetTickersAsync
+- **Endpoint:** `/api/pro/v1/spot/ticker`
+- **HTTP Method:** GET
+- **Parameters:** None
+- **Description:** Retrieves the ticker information for all symbols.
+
 
 ## Installation
 

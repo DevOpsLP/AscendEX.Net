@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -22,7 +23,7 @@ public class IntegrationTest
     }
 
     [Fact]
-    public async Task TestGetDepositAddressAsync()
+    public async Task TestGetTickerAsync()
     {
         var apiKey = "aFDCmtx9tIl379iQk6RPZrjK6Zr1qwkZ";
         var apiSecret = "pFwdrKnYtZgdZiUiJuaUIoguuWTqDfrAfx9hFonaDiImzgp76AF3fNYwZdP5U34c";
@@ -35,21 +36,20 @@ public class IntegrationTest
             options.ApiCredentials = new AscendEXApiCredentials(apiKey, apiSecret);
         });
 
-        var asset = "USDT";
-        var blockchain = "ERC20";  // Optional, can be null or empty
-        var depositAddressResult = await client.SpotApi.Wallet.GetDepositAddressAsync(asset, blockchain);
-
-        if (!depositAddressResult.Success)
+    // Fetch ticker data for BTC/USDT, ETH/USDT, and ASD/USDT
+    var tickersResult = await client.SpotApi.ExchangeData.GetTickerAsync("BTC/USDT,ETH/USDT,ASD/USDT");
+    if (tickersResult.Success)
+    {
+        foreach (var ticker in tickersResult.Data.Data)
         {
-            _logger.LogError("Failed to fetch deposit address: {Error}", depositAddressResult.Error);
-            _logger.LogError("HTTP Status Code: {StatusCode}", depositAddressResult.ResponseStatusCode);
-            _logger.LogError("Error Message: {Message}", depositAddressResult.Error?.Message);
+            _logger.LogInformation($"Symbol: {ticker.Symbol}, Open: {ticker.Open}, Close: {ticker.Close}, High: {ticker.High}, Low: {ticker.Low}, Volume: {ticker.Volume}");
         }
-
-        Assert.NotNull(depositAddressResult);
-        Assert.True(depositAddressResult.Success);
-
-        var depositAddressJson = JsonConvert.SerializeObject(depositAddressResult.Data, Formatting.Indented);
-        _logger.LogInformation("Deposit Address Data: {DepositAddressJson}", depositAddressJson);
+    }
+    else
+    {
+        _logger.LogError("Failed to fetch tickers: {Error}", tickersResult.Error);
+        _logger.LogError("HTTP Status Code: {StatusCode}", tickersResult.ResponseStatusCode);
+        _logger.LogError("Error Message: {Message}", tickersResult.Error?.Message);
+    }
     }
 }

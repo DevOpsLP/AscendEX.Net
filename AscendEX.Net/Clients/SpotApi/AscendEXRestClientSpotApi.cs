@@ -55,7 +55,7 @@ public AscendEXRestClientSpotApi(ILogger logger, HttpClient? httpClient, AscendE
 
             throw new ArgumentException("Invalid credentials provided. Expected AscendEXApiCredentials.", nameof(credentials));
         }
-    public override TimeSyncInfo GetTimeSyncInfo() => null;
+    public override TimeSyncInfo? GetTimeSyncInfo() => null;
 
     public override TimeSpan? GetTimeOffset() => null;
 
@@ -64,18 +64,18 @@ public AscendEXRestClientSpotApi(ILogger logger, HttpClient? httpClient, AscendE
         return $"{baseAsset}/{quoteAsset}".ToUpper();
     }
     
-    public async Task<WebCallResult<IEnumerable<Symbol>>> GetSymbolsAsync(CancellationToken ct = new CancellationToken())
+  public async Task<WebCallResult<IEnumerable<Symbol>>> GetSymbolsAsync(CancellationToken ct = new CancellationToken())
     {
-        var assets = await ExchangeData.GetProductsAsync(ct: ct).ConfigureAwait(false);
+        var assets = await ExchangeData.GetProductsAsync("cash",ct: ct).ConfigureAwait(false);
         if (!assets)
             return assets.As<IEnumerable<Symbol>>(null);
 
-        return assets.As(assets.Data.Select(s =>
+        return assets.As(assets.Data.Data.Select(s =>
             new Symbol()
             {
                 SourceObject = s,
                 Name = s.DisplayName,
-                MinTradeQuantity = Convert.ToDecimal(s.BaseIncrement)
+                MinTradeQuantity = Convert.ToDecimal(s.MinQty)
             }));
     }
 
@@ -83,12 +83,6 @@ public AscendEXRestClientSpotApi(ILogger logger, HttpClient? httpClient, AscendE
     {
         throw new NotImplementedException();
     }
-
-    public Task<WebCallResult<Symbol>> GetSymbolsAsync(string currency, CancellationToken ct = new CancellationToken())
-    {
-        throw new NotImplementedException();
-    }
-    
 
     public Task<WebCallResult<IEnumerable<Ticker>>> GetTickersAsync(CancellationToken ct = new CancellationToken())
     {
@@ -110,12 +104,6 @@ public AscendEXRestClientSpotApi(ILogger logger, HttpClient? httpClient, AscendE
     {
         throw new NotImplementedException();
     }
-
-    public async Task<WebCallResult<IEnumerable<Balance>>> GetAccountInfoAsync(string? accountId = null, CancellationToken ct = new CancellationToken())
-    {
-        throw new NotImplementedException();
-    }
-
     public async Task<WebCallResult<Order>> GetOrderAsync(string orderId, string? symbol = null, CancellationToken ct = new CancellationToken())
     {
         var o = await Trading.GetSingleOrderAsync(orderId, ct).ConfigureAwait(false);;
@@ -272,7 +260,6 @@ public AscendEXRestClientSpotApi(ILogger logger, HttpClient? httpClient, AscendE
             postPosition, arraySerialization, weight, 
             additionalHeaders: new Dictionary<string, string>
             {
-                //{"Content-Type", "application/json"}, 
                 { "User-Agent", Guid.NewGuid().ToString() }
             },
             ignoreRatelimit: ignoreRateLimit).ConfigureAwait(false);

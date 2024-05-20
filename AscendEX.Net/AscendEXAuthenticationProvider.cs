@@ -54,6 +54,10 @@ namespace AscendEX.Net
             {
                 message = $"{timestamp}+wallet/deposit/address";
             }
+            else if (lastSegment.Equals("transactions", StringComparison.OrdinalIgnoreCase) && pathSegments.Length > 2 && pathSegments[^2].Equals("wallet", StringComparison.OrdinalIgnoreCase))
+            {
+                message = $"{timestamp}+wallet/transactions";
+            }
             else
             {
                 message = $"{timestamp}+{lastSegment}";
