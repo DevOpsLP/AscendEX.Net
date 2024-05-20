@@ -80,7 +80,7 @@ var client = new AscendEXRestClient(options =>
 });
 
 var accountInfo = await client.SpotApi.Account.GetAccountInfoAsync();
-
+```
 
 ## Installation
 
