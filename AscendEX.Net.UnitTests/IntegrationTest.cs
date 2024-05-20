@@ -25,8 +25,8 @@ public class IntegrationTest
     [Fact]
     public async Task TestGetTickerAsync()
     {
-        var apiKey = "aFDCmtx9tIl379iQk6RPZrjK6Zr1qwkZ";
-        var apiSecret = "pFwdrKnYtZgdZiUiJuaUIoguuWTqDfrAfx9hFonaDiImzgp76AF3fNYwZdP5U34c";
+        var apiKey = "your_key";
+        var apiSecret = "Your_secret";
 
         Assert.False(string.IsNullOrEmpty(apiKey), "API Key is not set.");
         Assert.False(string.IsNullOrEmpty(apiSecret), "API Secret is not set.");
