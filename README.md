@@ -68,19 +68,7 @@ AscendEX.Net is a .NET wrapper for the AscendEX API, created using the CryptoExc
    - **Method:** `GET`
    - **Function:** `GetBalanceHistoryAsync`
    - **Parameters:** `string accountCategory`, `string date`
-
-## Usage
-
-Ensure you have the correct API credentials and account group for the endpoints. You can create an instance of `AscendEXRestClient` and use its methods to interact with the API. Here is a basic example of retrieving account information:
-
-```csharp
-var client = new AscendEXRestClient(options =>
-{
-    options.ApiCredentials = new AscendEXApiCredentials("your-api-key", "your-api-secret");
-});
-
-var accountInfo = await client.SpotApi.Account.GetAccountInfoAsync();
-```
+   
 ## ExchangeData Functions and Endpoints
 
 ### GetCurrenciesAsync
@@ -109,6 +97,19 @@ var accountInfo = await client.SpotApi.Account.GetAccountInfoAsync();
 - **Parameters:** None
 - **Description:** Retrieves the ticker information for all symbols.
 
+
+## Usage
+
+Ensure you have the correct API credentials and account group for the endpoints. You can create an instance of `AscendEXRestClient` and use its methods to interact with the API. Here is a basic example of retrieving account information:
+
+```csharp
+var client = new AscendEXRestClient(options =>
+{
+    options.ApiCredentials = new AscendEXApiCredentials("your-api-key", "your-api-secret");
+});
+
+var accountInfo = await client.SpotApi.Account.GetAccountInfoAsync();
+```
 
 ## Installation
 
