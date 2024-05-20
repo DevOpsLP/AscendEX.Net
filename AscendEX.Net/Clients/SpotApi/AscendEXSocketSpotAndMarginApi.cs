@@ -1,0 +1,97 @@
+using AscendEX.Net.Interfaces.Clients.SpotAndMarginApi;
+using AscendEX.Net.Objects.Internal;
+using AscendEX.Net.Objects.Options;
+using CryptoExchange.Net;
+using CryptoExchange.Net.Authentication;
+using CryptoExchange.Net.Objects;
+using CryptoExchange.Net.Sockets;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
+
+namespace AscendEX.Net.Clients.SpotApi;
+
+/// <inheritdoc />
+public class AscendEXSocketSpotApi : SocketApiClient, IAscendEXSocketClientSpotApi
+{
+    #region fields
+    /// <inheritdoc />
+    public new AscendEXSocketOptions ClientOptions => (AscendEXSocketOptions)base.ClientOptions;
+    /// <inheritdoc />
+    public new AscendEXSocketApiOptions ApiOptions => (AscendEXSocketApiOptions)base.ApiOptions;
+    #endregion
+    
+    #region constructor/destructor
+    
+    public IAscendEXSocketSpotApiExchangeData ExchangeData { get; }
+
+    internal AscendEXSocketSpotApi(ILogger logger, AscendEXSocketOptions options) :
+        base(logger, options.Environment.SpotAndMarginSocketAddress, options, options.SpotOptions)
+    {
+        SetDataInterpreter(_ => string.Empty, null);
+        
+        ExchangeData = new AscendEXSocketSpotApiExchangeData(logger, this);
+    }
+    #endregion
+
+    protected override AuthenticationProvider CreateAuthenticationProvider(ApiCredentials credentials)
+    {
+        throw new NotImplementedException();
+    }
+    
+    internal Task<CallResult<UpdateSubscription>> SubscribeAsync<T>(string url, string channel, IEnumerable<string> symbols, Action<DataEvent<T>> onData, CancellationToken ct)
+    {
+        var request = new AscendEXSocketRequest
+        {
+            Type = "subscribe",
+            ProductIds = symbols.ToArray(),
+            Channels = new List<string>{ channel }
+        };
+
+        return SubscribeAsync(url, request, null, false, onData, ct);
+    }
+
+    protected override bool HandleQueryResponse<T>(SocketConnection socketConnection, object request, JToken data, out CallResult<T>? callResult)
+    {
+        throw new NotImplementedException();
+    }
+
+    protected override bool HandleSubscriptionResponse(SocketConnection socketConnection,
+        SocketSubscription subscription, object request,
+        JToken data, out CallResult<object>? callResult)
+    {
+        callResult = null!;
+        if (data.Type != JTokenType.Object)
+            return false;
+        var response = data.ToObject<AscendEXSocketErrorResponse>();
+
+        if (response != null && response.Type.Equals("error"))
+        {
+            callResult = new CallResult<object>(new ServerError(0, $"{response.Message}: {response.Reason}"));
+            return true;
+        }
+        
+        _logger.Log(LogLevel.Trace, $"Socket {socketConnection.SocketId} Subscription completed");
+        callResult = new CallResult<object>(new object());
+        return true;
+    }
+
+    protected override bool MessageMatchesHandler(SocketConnection socketConnection, JToken message, object request)
+    {
+        return true;
+    }
+
+    protected override bool MessageMatchesHandler(SocketConnection socketConnection, JToken message, string identifier)
+    {
+        return true;
+    }
+
+    protected override Task<CallResult<bool>> AuthenticateSocketAsync(SocketConnection socketConnection)
+    {
+        throw new NotImplementedException();
+    }
+
+    protected override Task<bool> UnsubscribeAsync(SocketConnection connection, SocketSubscription subscriptionToUnsub)
+    {
+        throw new NotImplementedException();
+    }
+}

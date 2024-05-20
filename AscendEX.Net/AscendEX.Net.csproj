@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>11</LangVersion>
+        <Authors>Wim Devos</Authors>
+        <Description>AscendEX.Net is a .Net wrapper for the AscendEX API</Description>
+        <Company>Wim Devos</Company>
+        <AssemblyVersion>1.3.0</AssemblyVersion>
+        <FileVersion>1.3.0</FileVersion>
+        <NeutralLanguage>en</NeutralLanguage>
+        <TargetFramework>net8.0</TargetFramework>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Version>1.3.0</Version>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Folder Include="Clients\AccouncementsApi\" />
+      <Folder Include="Clients\DeliveryFuturesApi\" />
+      <Folder Include="Clients\OptionsApi\" />
+      <Folder Include="Clients\PerpetualFuturesApi\" />
+      <Folder Include="Icon\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="CryptoExchange.Net" Version="6.1.0" />
+    </ItemGroup>
+
+</Project>
