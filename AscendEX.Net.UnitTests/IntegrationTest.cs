@@ -38,11 +38,7 @@ public class IntegrationTest
             options.ApiCredentials = new AscendEXApiCredentials(apiKey, apiSecret);
         });
 
-        var accountInfoResult = await client.SpotApi.Account.GetAccountInfoAsync();
-        Assert.True(accountInfoResult.Success, "Failed to fetch account info.");
-        var accountGroup = accountInfoResult.Data.Data.AccountGroup;
-
-        var openOrdersResult = await client.SpotApi.Account.GetMarginRiskAsync(accountGroup, default);
+        var openOrdersResult = await client.SpotApi.Trading.CancelAllOrdersAsync(4, "cash", null, default);
 
         if (!openOrdersResult.Success)
         {
