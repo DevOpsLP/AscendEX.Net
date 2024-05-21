@@ -38,7 +38,9 @@ public class IntegrationTest
             options.ApiCredentials = new AscendEXApiCredentials(apiKey, apiSecret);
         });
 
-        var openOrdersResult = await client.SpotApi.Trading.CancelAllOrdersAsync(4, "cash", null, default);
+        var openOrdersResult = await client.SpotApi.Trading.PlaceOrderAsync(
+            4, "cash", "BTC/USDT", AscendEX.Net.Enums.OrderSide.Buy, AscendEX.Net.Enums.OrderType.Limit, 0.0001m, "50000", null, null, "GTC", "ACCEPT", default
+        );
 
         if (!openOrdersResult.Success)
         {

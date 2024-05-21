@@ -7,6 +7,27 @@ namespace AscendEX.Net.Objects
         [JsonProperty("code")]
         public int Code { get; set; }
 
+        [JsonProperty("ac")]
+        public string AccountCategory { get; set; }
+
+        [JsonProperty("accountId")]
+        public string AccountId { get; set; }
+
+        [JsonProperty("action")]
+        public string Action { get; set; }
+
+        [JsonProperty("info")]
+        public OrderInfo Info { get; set; }
+
+        [JsonProperty("message")]
+        public string Message { get; set; }
+
+        [JsonProperty("reason")]
+        public string Reason { get; set; }
+
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
         [JsonProperty("data")]
         public OrderData Data { get; set; }
 

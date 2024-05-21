@@ -130,55 +130,57 @@ public class AscendEXRestClientSpotApi : RestApiClient, IAscendEXRestClientSpotA
     }
 
 
-    public async Task<WebCallResult<OrderId>> PlaceOrderAsync(
-             string symbol,
-            CommonOrderSide side,
-             CommonOrderType type,
-             decimal quantity,
-             decimal? price,
-             string? accountId,
-             string? clientOrderId,
-             CancellationToken ct)
+public async Task<WebCallResult<OrderId>> PlaceOrderAsync(
+    string symbol,
+    CommonOrderSide side,
+    CommonOrderType type,
+    decimal quantity,
+    decimal? price,
+    string? accountId,
+    string? clientOrderId,
+    CancellationToken ct)
+{
+    if (string.IsNullOrWhiteSpace(symbol))
+        throw new ArgumentException(nameof(symbol) + " required for AscendEX " + nameof(ISpotClient.PlaceOrderAsync), nameof(symbol));
+
+    if (string.IsNullOrWhiteSpace(accountId))
+        throw new ArgumentException(nameof(accountId) + " required for AscendEX " + nameof(ISpotClient.PlaceOrderAsync), nameof(accountId));
+
+    // Assuming accountId is a composite of accountGroup and accountCategory
+    var accountParts = accountId.Split(':');
+    if (accountParts.Length != 2)
+        throw new ArgumentException("Invalid accountId format. Expected format is 'accountGroup:accountCategory'", nameof(accountId));
+
+    if (!int.TryParse(accountParts[0], out var accountGroup))
+        throw new ArgumentException("Invalid accountGroup in accountId", nameof(accountId));
+
+    var accountCategory = accountParts[1];
+
+    var priceStr = price?.ToString();
+    var stopPriceStr = (decimal?)null; // Replace with actual stop price if needed
+
+    var order = await Trading.PlaceOrderAsync(
+        accountGroup,
+        accountCategory,
+        symbol,
+        GetOrderSide(side),
+        GetOrderType(type),
+        quantity,
+        priceStr,
+        clientOrderId,
+        stopPriceStr?.ToString(CultureInfo.InvariantCulture),
+        type == CommonOrderType.Limit ? "GTC" : null, // Assuming timeInForce for limit orders is Good Till Canceled
+        null, // respInst is null for now, can be adjusted as needed
+        ct).ConfigureAwait(false);
+
+    if (!order)
+        return order.As<OrderId>(null);
+
+    return order.As(new OrderId
     {
-        if (string.IsNullOrWhiteSpace(symbol))
-            throw new ArgumentException(nameof(symbol) + " required for AscendEX " + nameof(ISpotClient.PlaceOrderAsync), nameof(symbol));
-
-        if (string.IsNullOrWhiteSpace(accountId))
-            throw new ArgumentException(nameof(accountId) + " required for AscendEX " + nameof(ISpotClient.PlaceOrderAsync), nameof(accountId));
-
-        // Assuming accountId is a composite of accountGroup and accountCategory
-        var accountParts = accountId.Split(':');
-        if (accountParts.Length != 2)
-            throw new ArgumentException("Invalid accountId format. Expected format is 'accountGroup:accountCategory'", nameof(accountId));
-
-        if (!int.TryParse(accountParts[0], out var accountGroup))
-            throw new ArgumentException("Invalid accountGroup in accountId", nameof(accountId));
-
-        var accountCategory = accountParts[1];
-
-        var order = await Trading.PlaceOrderAsync(
-            accountGroup,
-            accountCategory,
-            symbol,
-            GetOrderSide(side),
-            GetOrderType(type),
-            quantity,
-            price,
-            clientOrderId,
-            null, // stopPrice is null for now, can be adjusted as needed
-            type == CommonOrderType.Limit ? "GTC" : null, // Assuming timeInForce for limit orders is Good Till Canceled
-            null, // respInst is null for now, can be adjusted as needed
-            ct).ConfigureAwait(false);
-
-        if (!order)
-            return order.As<OrderId>(null);
-
-        return order.As(new OrderId
-        {
-            SourceObject = order,
-        });
-    }
-
+        SourceObject = order,
+    });
+}
 
 
     public async Task<WebCallResult<IEnumerable<Symbol>>> GetSymbolsAsync(CancellationToken ct = new CancellationToken())

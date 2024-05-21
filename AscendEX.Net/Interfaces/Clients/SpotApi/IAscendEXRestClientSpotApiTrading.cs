@@ -21,9 +21,9 @@ public interface IAscendEXRestClientSpotApiTrading
                 OrderSide side,
                 OrderType type,
                 decimal quantity,
-                decimal? price = null,
+                string? price = null,
                 string? clientOrderId = null,
-                decimal? stopPrice = null,
+                string? stopPrice = null,
                 string? timeInForce = null,
                 string? respInst = null,
                 CancellationToken ct = new CancellationToken());

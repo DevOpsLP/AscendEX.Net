@@ -75,71 +75,76 @@ namespace AscendEX.Net.Clients.SpotApi
                 _baseClient.GetUrl(Orders),
                 HttpMethod.Delete, ct, parameters, postPosition: HttpMethodParameterPosition.InUri, signed: true).ConfigureAwait(false);
         }
-
-        internal async Task<WebCallResult<AscendEXOrderResponse>> PlaceOrderInternal(
-            int accountGroup,
-            string accountCategory,
-            string symbol,
-            Enums.OrderSide side,
-            Enums.OrderType type,
-            decimal? quantity = null,
-            decimal? price = null,
-            string? clientOrderId = null,
-            decimal? stopPrice = null,
-            string? timeInForce = null,
-            string? respInst = null,
-            CancellationToken ct = default)
-        {
-            var endpoint = $"/{accountGroup}/api/pro/v1/{accountCategory}/order";
-            var parameters = new Dictionary<string, object>
+internal async Task<WebCallResult<AscendEXOrderResponse>> PlaceOrderInternal(
+    int accountGroup,
+    string accountCategory,
+    string symbol,
+    Enums.OrderSide side,
+    Enums.OrderType type,
+    decimal? quantity = null,
+    string price = null,
+    string? clientOrderId = null,
+    string stopPrice = null,
+    string? timeInForce = null,
+    string? respInst = null,
+    long? time = null,
+    CancellationToken ct = default)
+{
+    var endpoint = $"/{accountGroup}/api/pro/v1/{accountCategory}/order";
+    var parameters = new Dictionary<string, object>
     {
         { "symbol", symbol },
         { "side", JsonConvert.SerializeObject(side, new OrderSideConverter(false)) },
         { "orderType", JsonConvert.SerializeObject(type, new OrderTypeConverter(false)) },
-        { "orderQty", quantity?.ToString(CultureInfo.InvariantCulture) }
+        { "orderQty", quantity?.ToString(CultureInfo.InvariantCulture) },
+        { "time", time?.ToString() }
     };
 
-            parameters.AddOptionalParameter("id", clientOrderId);
-            parameters.AddOptionalParameter("orderPrice", price?.ToString(CultureInfo.InvariantCulture));
-            parameters.AddOptionalParameter("stopPrice", stopPrice?.ToString(CultureInfo.InvariantCulture));
-            parameters.AddOptionalParameter("timeInForce", timeInForce);
-            parameters.AddOptionalParameter("respInst", respInst);
+    parameters.AddOptionalParameter("id", clientOrderId);
+    parameters.AddOptionalParameter("orderPrice", price);
+    parameters.AddOptionalParameter("stopPrice", stopPrice);
+    parameters.AddOptionalParameter("timeInForce", timeInForce);
+    parameters.AddOptionalParameter("respInst", respInst);
 
-            return await _baseClient.SendRequestInternal<AscendEXOrderResponse>(
-                _baseClient.GetUrl(endpoint),
-                HttpMethod.Post, ct, parameters, true).ConfigureAwait(false);
-        }
+    return await _baseClient.SendRequestInternal<AscendEXOrderResponse>(
+        _baseClient.GetUrl(endpoint),
+        HttpMethod.Post, ct, parameters, true).ConfigureAwait(false);
+}
 
-        public async Task<WebCallResult<AscendEXOrderResponse>> PlaceOrderAsync(
-            int accountGroup,
-            string accountCategory,
-            string symbol,
-            Enums.OrderSide side,
-            Enums.OrderType type,
-            decimal quantity,
-            decimal? price = null,
-            string? clientOrderId = null,
-            decimal? stopPrice = null,
-            string? timeInForce = null,
-            string? respInst = null,
-            CancellationToken ct = new CancellationToken())
-        {
-            var result = await PlaceOrderInternal(
-                accountGroup,
-                accountCategory,
-                symbol,
-                side,
-                type,
-                quantity,
-                price,
-                clientOrderId,
-                stopPrice,
-                timeInForce,
-                respInst,
-                ct).ConfigureAwait(false);
 
-            return result;
-        }
+public async Task<WebCallResult<AscendEXOrderResponse>> PlaceOrderAsync(
+    int accountGroup,
+    string accountCategory,
+    string symbol,
+    Enums.OrderSide side,
+    Enums.OrderType type,
+    decimal quantity,
+    string? price = null,
+    string? clientOrderId = null,
+    string? stopPrice = null,
+    string? timeInForce = null,
+    string? respInst = null,
+    CancellationToken ct = new CancellationToken())
+{
+    var currentTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    var result = await PlaceOrderInternal(
+        accountGroup,
+        accountCategory,
+        symbol,
+        side,
+        type,
+        quantity,
+        price?.ToString(CultureInfo.InvariantCulture),
+        clientOrderId,
+        stopPrice?.ToString(CultureInfo.InvariantCulture),
+        timeInForce,
+        respInst,
+        currentTime,
+        ct).ConfigureAwait(false);
+
+    return result;
+}
+
         public async Task<WebCallResult<AscendEXOrderStatusResponse>> GetSingleOrderAsync(string accountGroup, string accountCategory, string orderId, CancellationToken ct = default)
         {
             var endpoint = $"/{accountGroup}/api/pro/v1/{accountCategory}/order/status";
