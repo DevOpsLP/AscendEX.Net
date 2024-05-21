@@ -10,7 +10,7 @@ public interface IAscendEXRestClientSpotApi
     /// </summary>
         IAscendEXRestClientSpotApiAccount Account { get; }
         IAscendEXRestClientSpotApiWallet Wallet { get; }
-
+        IAscendEXRestClientSpotApiTrading Trading { get; }
         IAscendEXRestClientSpotApiExchangeData ExchangeData{ get; }
     void SetApiCredentials<T>(T credentials) where T : ApiCredentials;
 }

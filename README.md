@@ -97,6 +97,58 @@ AscendEX.Net is a .NET wrapper for the AscendEX API, created using the CryptoExc
 - **Parameters:** None
 - **Description:** Retrieves the ticker information for all symbols.
 
+### GetBarHistInfoAsync
+- **Endpoint:** `/api/pro/v1/barhist/info`
+- **HTTP Method:** GET
+- **Parameters:** None
+- **Description:** Retrieves information about historical bar intervals.
+
+### GetBarHistAsync
+- **Endpoint:** `/api/pro/v1/barhist`
+- **HTTP Method:** GET
+- **Parameters:**
+  - `symbol` (string, required): The trading pair symbol (e.g., `ASD/USDT`).
+  - `interval` (string, required): The interval for the historical data (e.g., `1`).
+  - `to` (long, optional): UTC timestamp in milliseconds, set to the current time if not provided.
+  - `from` (long, optional): UTC timestamp in milliseconds.
+  - `n` (int, optional): The number of bars to be returned, default is 10 and capped at 500.
+- **Description:** Retrieves historical bar data for the specified trading pair and interval.
+
+### GetDepthAsync
+- **Endpoint:** /api/pro/v1/depth
+- **HTTP Method:**  GET
+- **Parameters:**
+   - `symbol` (string, required): The trading pair symbol (e.g., "ASD/USDT").
+- **Description:** Retrieves the order book depth for a specified trading pair.
+
+### GetTradesAsync
+- **Endpoint:** /api/pro/v1/trades
+- **HTTP Method:** GET
+- **Parameters:**
+   - `symbol` (string, required): The trading pair symbol (e.g., "ASD/USDT").
+   - `n` (int, optional): Number of trades to return, capped at 100.
+- **Description:** Retrieves recent trades for a specified trading pair.
+
+## Order Endpoints
+
+### GetOrderAsync
+- **Endpoint:** `/api/pro/v1/{accountCategory}/order/status`
+- **HTTP Method:** GET
+- **Parameters:**
+  - `accountGroup` (string, required): The account group.
+  - `accountCategory` (string, required): The account category (e.g., "cash").
+  - `orderId` (string, required): The order ID.
+- **Description:** Retrieves the status of a specific order.
+- **Response:** Returns the full response from the AscendEX API.
+
+### GetOpenOrdersAsync
+- **Endpoint:** `/api/pro/v1/{accountCategory}/order/open`
+- **HTTP Method:** GET
+- **Parameters:**
+  - `accountGroup` (string, required): The account group.
+  - `accountCategory` (string, required): The account category (e.g., "cash").
+- **Description:** Retrieves all open orders for a specified account group and category.
+- **Response:** Returns the full response from the AscendEX API.
 
 ## Usage
 

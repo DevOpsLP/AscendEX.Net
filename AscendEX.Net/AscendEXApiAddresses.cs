@@ -16,7 +16,7 @@ public class AscendEXApiAddresses
     /// </summary>
     public static AscendEXApiAddresses Default = new AscendEXApiAddresses
     {
-        RestClientAddress = "https://ascendex.com/",
+        RestClientAddress = "https://ascendex.com",
         SocketClientAddress = "wss://ascendex.com",
     };
     

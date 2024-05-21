@@ -15,8 +15,13 @@ public enum OrderType
     [Map("market")]
     Market,
     /// <summary>
-    /// Stop
+    /// Stop Market
     /// </summary>
-    [Map("stop")]
-    Stop
+    [Map("stop_market")]
+    StopMarket,
+    /// <summary>
+    /// Stop Limit
+    /// </summary>
+    [Map("stop_limit")]
+    StopLimit
 }

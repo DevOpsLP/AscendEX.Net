@@ -16,6 +16,10 @@ namespace AscendEX.Net.Clients.SpotApi
         private const string AllCurrencies = "/api/pro/v2/assets";
         private const string Products = "/api/pro/v1/{accountCategory}/products";
         private const string Ticker = "/api/pro/v1/spot/ticker";
+        private const string BarHistInfo = "/api/pro/v1/barhist/info";
+        private const string BarHist = "/api/pro/v1/barhist";
+        private const string Depth = "/api/pro/v1/depth";
+        private const string Trades = "/api/pro/v1/trades";
 
         private readonly ILogger _logger;
         private readonly AscendEXRestClientSpotApi _baseClient;
@@ -60,5 +64,60 @@ namespace AscendEX.Net.Clients.SpotApi
                 _baseClient.GetUrl(Ticker),
                 HttpMethod.Get, ct).ConfigureAwait(false);
         }
+
+        public async Task<WebCallResult<AscendEXBarHistInfo>> GetBarHistInfoAsync(CancellationToken ct = default)
+        {
+            return await _baseClient.SendRequestInternal<AscendEXBarHistInfo>(
+                _baseClient.GetUrl(BarHistInfo),
+                HttpMethod.Get, ct).ConfigureAwait(false);
+        }
+
+        public async Task<WebCallResult<AscendEXBarHistResponse>> GetBarHistAsync(string symbol, string interval, long? to = null, long? from = null, int? n = null, CancellationToken ct = default)
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                { "symbol", symbol },
+                { "interval", interval }
+            };
+            if (to.HasValue)
+                parameters.Add("to", to.Value);
+            if (from.HasValue)
+                parameters.Add("from", from.Value);
+            if (n.HasValue)
+                parameters.Add("n", n.Value);
+
+            return await _baseClient.SendRequestInternal<AscendEXBarHistResponse>(
+                _baseClient.GetUrl(BarHist),
+                HttpMethod.Get, ct, parameters).ConfigureAwait(false);
+        }
+
+
+        public async Task<WebCallResult<AscendEXDepthResponse>> GetDepthAsync(string symbol, CancellationToken ct = default)
+        {
+            var parameters = new Dictionary<string, object>
+    {
+        { "symbol", symbol }
+    };
+
+            return await _baseClient.SendRequestInternal<AscendEXDepthResponse>(
+                _baseClient.GetUrl(Depth),
+                HttpMethod.Get, ct, parameters).ConfigureAwait(false);
+        }
+
+public async Task<WebCallResult<AscendEXTradesResponse>> GetTradesAsync(string symbol, int? n = null, CancellationToken ct = default)
+{
+    var parameters = new Dictionary<string, object>
+    {
+        { "symbol", symbol }
+    };
+    if (n.HasValue)
+    {
+        parameters.Add("n", n.Value);
+    }
+
+    return await _baseClient.SendRequestInternal<AscendEXTradesResponse>(
+        _baseClient.GetUrl(Trades),
+        HttpMethod.Get, ct, parameters).ConfigureAwait(false);
+}
     }
 }

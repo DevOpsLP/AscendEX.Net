@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using CryptoExchange.Net;
 using CryptoExchange.Net.Authentication;
 using CryptoExchange.Net.Objects;
-using Newtonsoft.Json;
 
 namespace AscendEX.Net
 {
@@ -32,40 +30,51 @@ namespace AscendEX.Net
                 return;
 
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
-            var pathSegments = uri.AbsolutePath.Split('/');
-            var lastSegment = pathSegments.Last();
+            var path = uri.AbsolutePath.ToLowerInvariant();
 
             string message;
-            if (lastSegment.Equals("risk", StringComparison.OrdinalIgnoreCase) && pathSegments.Length > 2 && pathSegments[^2].Equals("margin", StringComparison.OrdinalIgnoreCase))
+            if (path.EndsWith("all"))
+            {
+                message = $"{timestamp}+order/all";
+            }
+            else if (path.EndsWith("/order/open"))
+            {
+                message = $"{timestamp}+order/open";
+            }
+            else if (path.EndsWith("/order/status"))
+            {
+                message = $"{timestamp}+order/status";
+            }
+            else if (path.EndsWith("/margin/risk"))
             {
                 message = $"{timestamp}+margin/risk";
             }
-            else if (lastSegment.Equals("snapshot", StringComparison.OrdinalIgnoreCase) && pathSegments.Length > 3 && pathSegments[^3].Equals("data", StringComparison.OrdinalIgnoreCase))
+            else if (path.Contains("/data/v1/") && path.EndsWith("/balance/snapshot"))
             {
-                var accountType = pathSegments[^2];
+                var accountType = path.Split('/').Reverse().Skip(2).First();
                 message = $"{timestamp}+data/v1/{accountType}/balance/snapshot";
             }
-            else if (lastSegment.Equals("history", StringComparison.OrdinalIgnoreCase) && pathSegments.Length > 3 && pathSegments[^3].Equals("data", StringComparison.OrdinalIgnoreCase))
+            else if (path.Contains("/data/v1/") && path.EndsWith("/balance/history"))
             {
-                var accountType = pathSegments[^2];
+                var accountType = path.Split('/').Reverse().Skip(2).First();
                 message = $"{timestamp}+data/v1/{accountType}/balance/history";
             }
-            else if (lastSegment.Equals("address", StringComparison.OrdinalIgnoreCase) && pathSegments.Length > 2 && pathSegments[^2].Equals("deposit", StringComparison.OrdinalIgnoreCase))
+            else if (path.EndsWith("/wallet/deposit/address"))
             {
                 message = $"{timestamp}+wallet/deposit/address";
             }
-            else if (lastSegment.Equals("transactions", StringComparison.OrdinalIgnoreCase) && pathSegments.Length > 2 && pathSegments[^2].Equals("wallet", StringComparison.OrdinalIgnoreCase))
+            else if (path.EndsWith("/wallet/transactions"))
             {
                 message = $"{timestamp}+wallet/transactions";
             }
             else
             {
-                message = $"{timestamp}+{lastSegment}";
+                message = $"{timestamp}+{path.Split('/').Last()}";
             }
 
             Console.WriteLine($"Signing message: {message}");
 
-            var signature = GetSignHmacsha256(message);
+            var signature = GetSignHmacsha256(message, _credentials.Secret.GetString());
             Console.WriteLine($"Signature: {signature}");
 
             headers.Add("x-auth-key", _credentials.Key.GetString());
@@ -74,9 +83,9 @@ namespace AscendEX.Net
             headers.Add("Accept", "application/json");
         }
 
-        private string GetSignHmacsha256(string message)
+        private static string GetSignHmacsha256(string message, string secret)
         {
-            using var hmacsha256 = new HMACSHA256(Encoding.UTF8.GetBytes(_credentials.Secret.GetString()));
+            using var hmacsha256 = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
             var hash = hmacsha256.ComputeHash(Encoding.UTF8.GetBytes(message));
             return Convert.ToBase64String(hash);
         }

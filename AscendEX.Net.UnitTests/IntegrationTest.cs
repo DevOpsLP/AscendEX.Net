@@ -9,6 +9,8 @@ using AscendEX.Net.Clients;
 using AscendEX.Net;
 using CryptoExchange.Net.Authentication;
 using AscendEX.Net.Objects;
+using AscendEX.Net.Clients.SpotApi;
+using CryptoExchange.Net.CommonObjects;
 
 public class IntegrationTest
 {
@@ -23,7 +25,7 @@ public class IntegrationTest
     }
 
     [Fact]
-    public async Task TestGetTickerAsync()
+    public async Task TestGetOpenOrdersAsync()
     {
         var apiKey = "your_key";
         var apiSecret = "Your_secret";
@@ -36,20 +38,23 @@ public class IntegrationTest
             options.ApiCredentials = new AscendEXApiCredentials(apiKey, apiSecret);
         });
 
-    // Fetch ticker data for BTC/USDT, ETH/USDT, and ASD/USDT
-    var tickersResult = await client.SpotApi.ExchangeData.GetTickerAsync("BTC/USDT,ETH/USDT,ASD/USDT");
-    if (tickersResult.Success)
-    {
-        foreach (var ticker in tickersResult.Data.Data)
+        var accountInfoResult = await client.SpotApi.Account.GetAccountInfoAsync();
+        Assert.True(accountInfoResult.Success, "Failed to fetch account info.");
+        var accountGroup = accountInfoResult.Data.Data.AccountGroup;
+
+        var openOrdersResult = await client.SpotApi.Account.GetMarginRiskAsync(accountGroup, default);
+
+        if (!openOrdersResult.Success)
         {
-            _logger.LogInformation($"Symbol: {ticker.Symbol}, Open: {ticker.Open}, Close: {ticker.Close}, High: {ticker.High}, Low: {ticker.Low}, Volume: {ticker.Volume}");
+            _logger.LogError("Failed to fetch open orders: {Error}", openOrdersResult.Error);
+            _logger.LogError("HTTP Status Code: {StatusCode}", openOrdersResult.ResponseStatusCode);
+            _logger.LogError("Error Message: {Message}", openOrdersResult.Error?.Message);
         }
-    }
-    else
-    {
-        _logger.LogError("Failed to fetch tickers: {Error}", tickersResult.Error);
-        _logger.LogError("HTTP Status Code: {StatusCode}", tickersResult.ResponseStatusCode);
-        _logger.LogError("Error Message: {Message}", tickersResult.Error?.Message);
-    }
+
+        Assert.NotNull(openOrdersResult);
+        Assert.True(openOrdersResult.Success, "Failed to fetch open orders.");
+
+        var ordersJson = JsonConvert.SerializeObject(openOrdersResult, Formatting.Indented);
+        _logger.LogInformation("Open Orders Data: {OrdersJson}", ordersJson);
     }
 }

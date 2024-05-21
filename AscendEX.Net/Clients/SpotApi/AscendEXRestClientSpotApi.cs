@@ -22,7 +22,7 @@ public class AscendEXRestClientSpotApi : RestApiClient, IAscendEXRestClientSpotA
     /// <inheritdoc />
     public new AscendEXRestOptions ClientOptions => (AscendEXRestOptions)base.ClientOptions;
     #endregion
-    
+
     #region Api clients
     /// <inheritdoc />
     public IAscendEXRestClientSpotApiExchangeData ExchangeData { get; }
@@ -32,29 +32,94 @@ public class AscendEXRestClientSpotApi : RestApiClient, IAscendEXRestClientSpotA
 
     public string ExchangeName => "AscendEX";
     #endregion
-    
-public AscendEXRestClientSpotApi(ILogger logger, HttpClient? httpClient, AscendEXRestOptions options)
-    : base(logger, httpClient, options.Environment.SpotAndMarginRestAddress, options, options.SpotAndMarginOptions)
-{
-    ExchangeData = new AscendEXRestClientSpotApiExchangeData(logger, this);
-    Trading = new AscendEXRestClientSpotApiTrading(logger, this);
-    Account = new AscendEXRestClientSpotApiAccount(logger, this);
-    Wallet = new AscendEXRestClientSpotApiWallet(logger, this);  // Add this line
-}
+
+    private static OrderSide GetOrderSide(CommonOrderSide side)
+    {
+        return side switch
+        {
+            CommonOrderSide.Buy => OrderSide.Buy,
+            CommonOrderSide.Sell => OrderSide.Sell,
+            _ => throw new ArgumentException("Unsupported order side for AscendEX order: " + side)
+        };
+    }
+    private static CommonOrderSide GetCommonOrderSide(string side)
+    {
+        return side.ToLower() switch
+        {
+            "buy" => CommonOrderSide.Buy,
+            "sell" => CommonOrderSide.Sell,
+            _ => throw new ArgumentException("Unsupported order side for AscendEX order: " + side)
+        };
+    }
+
+
+    private static CommonOrderType GetCommonOrderType(Enums.OrderType type)
+    {
+        return type switch
+        {
+            Enums.OrderType.Limit => CommonOrderType.Limit,
+            Enums.OrderType.Market => CommonOrderType.Market,
+            Enums.OrderType.StopMarket => CommonOrderType.Other, // Adjust if there's a better mapping
+            Enums.OrderType.StopLimit => CommonOrderType.Other,  // Adjust if there's a better mapping
+            _ => throw new ArgumentException("Unsupported order type for AscendEX order: " + type)
+        };
+    }
+
+    private static CommonOrderStatus GetCommonOrderStatus(Enums.OrderStatus status)
+    {
+        return status switch
+        {
+            Enums.OrderStatus.New => CommonOrderStatus.Active,
+            Enums.OrderStatus.PartiallyFilled => CommonOrderStatus.Filled,
+            Enums.OrderStatus.Filled => CommonOrderStatus.Filled,
+            Enums.OrderStatus.Canceled => CommonOrderStatus.Canceled,
+            Enums.OrderStatus.PendingNew => CommonOrderStatus.Active,
+            Enums.OrderStatus.Rejected => CommonOrderStatus.Canceled,
+            Enums.OrderStatus.Accept => CommonOrderStatus.Filled,
+            Enums.OrderStatus.Ack => CommonOrderStatus.Active,
+            Enums.OrderStatus.Done => CommonOrderStatus.Filled,
+            Enums.OrderStatus.Err => CommonOrderStatus.Canceled,
+            Enums.OrderStatus.Active => CommonOrderStatus.Active,
+            Enums.OrderStatus.All => CommonOrderStatus.Filled, // Assuming 'All' implies completion
+            Enums.OrderStatus.Open => CommonOrderStatus.Active,
+            Enums.OrderStatus.Received => CommonOrderStatus.Filled,
+            Enums.OrderStatus.Pending => CommonOrderStatus.Active,
+            _ => throw new ArgumentException("Unsupported order status for AscendEX order: " + status)
+        };
+    }
+    private static Enums.OrderType GetOrderType(CommonOrderType type)
+    {
+        return type switch
+        {
+            CommonOrderType.Limit => Enums.OrderType.Limit,
+            CommonOrderType.Market => Enums.OrderType.Market,
+            CommonOrderType.Other => Enums.OrderType.StopMarket, // Adjust if there's a better mapping
+            _ => throw new ArgumentException("Unsupported order type for AscendEX order: " + type)
+        };
+    }
+
+    public AscendEXRestClientSpotApi(ILogger logger, HttpClient? httpClient, AscendEXRestOptions options)
+        : base(logger, httpClient, options.Environment.SpotAndMarginRestAddress, options, options.SpotAndMarginOptions)
+    {
+        ExchangeData = new AscendEXRestClientSpotApiExchangeData(logger, this);
+        Trading = new AscendEXRestClientSpotApiTrading(logger, this);
+        Account = new AscendEXRestClientSpotApiAccount(logger, this);
+        Wallet = new AscendEXRestClientSpotApiWallet(logger, this);  // Add this line
+    }
 
     internal Uri GetUrl(string endpoint)
     {
         return new Uri(BaseAddress.AppendPath(endpoint));
     }
 
-        protected override AuthenticationProvider CreateAuthenticationProvider(ApiCredentials credentials)
-        {
-            // Ensure credentials are of the correct type
-            if (credentials is AscendEXApiCredentials ascendexCredentials)
-                return new AscendEXAuthenticationProvider(ascendexCredentials);
+    protected override AuthenticationProvider CreateAuthenticationProvider(ApiCredentials credentials)
+    {
+        // Ensure credentials are of the correct type
+        if (credentials is AscendEXApiCredentials ascendexCredentials)
+            return new AscendEXAuthenticationProvider(ascendexCredentials);
 
-            throw new ArgumentException("Invalid credentials provided. Expected AscendEXApiCredentials.", nameof(credentials));
-        }
+        throw new ArgumentException("Invalid credentials provided. Expected AscendEXApiCredentials.", nameof(credentials));
+    }
     public override TimeSyncInfo? GetTimeSyncInfo() => null;
 
     public override TimeSpan? GetTimeOffset() => null;
@@ -63,10 +128,62 @@ public AscendEXRestClientSpotApi(ILogger logger, HttpClient? httpClient, AscendE
     {
         return $"{baseAsset}/{quoteAsset}".ToUpper();
     }
-    
-  public async Task<WebCallResult<IEnumerable<Symbol>>> GetSymbolsAsync(CancellationToken ct = new CancellationToken())
+
+
+    public async Task<WebCallResult<OrderId>> PlaceOrderAsync(
+             string symbol,
+            CommonOrderSide side,
+             CommonOrderType type,
+             decimal quantity,
+             decimal? price,
+             string? accountId,
+             string? clientOrderId,
+             CancellationToken ct)
     {
-        var assets = await ExchangeData.GetProductsAsync("cash",ct: ct).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(symbol))
+            throw new ArgumentException(nameof(symbol) + " required for AscendEX " + nameof(ISpotClient.PlaceOrderAsync), nameof(symbol));
+
+        if (string.IsNullOrWhiteSpace(accountId))
+            throw new ArgumentException(nameof(accountId) + " required for AscendEX " + nameof(ISpotClient.PlaceOrderAsync), nameof(accountId));
+
+        // Assuming accountId is a composite of accountGroup and accountCategory
+        var accountParts = accountId.Split(':');
+        if (accountParts.Length != 2)
+            throw new ArgumentException("Invalid accountId format. Expected format is 'accountGroup:accountCategory'", nameof(accountId));
+
+        if (!int.TryParse(accountParts[0], out var accountGroup))
+            throw new ArgumentException("Invalid accountGroup in accountId", nameof(accountId));
+
+        var accountCategory = accountParts[1];
+
+        var order = await Trading.PlaceOrderAsync(
+            accountGroup,
+            accountCategory,
+            symbol,
+            GetOrderSide(side),
+            GetOrderType(type),
+            quantity,
+            price,
+            clientOrderId,
+            null, // stopPrice is null for now, can be adjusted as needed
+            type == CommonOrderType.Limit ? "GTC" : null, // Assuming timeInForce for limit orders is Good Till Canceled
+            null, // respInst is null for now, can be adjusted as needed
+            ct).ConfigureAwait(false);
+
+        if (!order)
+            return order.As<OrderId>(null);
+
+        return order.As(new OrderId
+        {
+            SourceObject = order,
+        });
+    }
+
+
+
+    public async Task<WebCallResult<IEnumerable<Symbol>>> GetSymbolsAsync(CancellationToken ct = new CancellationToken())
+    {
+        var assets = await ExchangeData.GetProductsAsync("cash", ct: ct).ConfigureAwait(false);
         if (!assets)
             return assets.As<IEnumerable<Symbol>>(null);
 
@@ -79,14 +196,85 @@ public AscendEXRestClientSpotApi(ILogger logger, HttpClient? httpClient, AscendE
             }));
     }
 
-    public Task<WebCallResult<Ticker>> GetTickerAsync(string symbol, CancellationToken ct = new CancellationToken())
+    public async Task<WebCallResult<Ticker>> GetTickerAsync(string symbol, CancellationToken ct = new CancellationToken())
     {
-        throw new NotImplementedException();
+        var tickerResult = await ExchangeData.GetTickerAsync(symbol, ct).ConfigureAwait(false);
+
+        if (!tickerResult.Success || tickerResult.Data == null || !tickerResult.Data.Data.Any())
+            return tickerResult.As<Ticker>(null);
+
+        var firstTicker = tickerResult.Data.Data.First();
+
+        var ticker = new Ticker
+        {
+            Symbol = firstTicker.Symbol,
+            HighPrice = decimal.TryParse(firstTicker.High, NumberStyles.Any, CultureInfo.InvariantCulture, out var highPrice) ? highPrice : (decimal?)null,
+            LowPrice = decimal.TryParse(firstTicker.Low, NumberStyles.Any, CultureInfo.InvariantCulture, out var lowPrice) ? lowPrice : (decimal?)null,
+            LastPrice = decimal.TryParse(firstTicker.Close, NumberStyles.Any, CultureInfo.InvariantCulture, out var lastPrice) ? lastPrice : (decimal?)null,
+            Volume = decimal.TryParse(firstTicker.Volume, NumberStyles.Any, CultureInfo.InvariantCulture, out var volume) ? volume : (decimal?)null,
+            // Assuming QuoteVolume and PriceChange information is available or can be derived
+            // QuoteVolume = , 
+            // PriceChange = ,
+            // PriceChangePercent = 
+        };
+
+        return new WebCallResult<Ticker>(
+            tickerResult.ResponseStatusCode,
+            tickerResult.ResponseHeaders,
+            tickerResult.ResponseTime,
+            tickerResult.ResponseLength,
+            tickerResult.OriginalData,
+            tickerResult.RequestUrl,
+            tickerResult.RequestBody,
+            tickerResult.RequestMethod,
+            tickerResult.RequestHeaders,
+            ticker,
+            tickerResult.Error);
     }
 
-    public Task<WebCallResult<IEnumerable<Ticker>>> GetTickersAsync(CancellationToken ct = new CancellationToken())
+    public async Task<WebCallResult<IEnumerable<Ticker>>> GetTickersAsync(CancellationToken ct = new CancellationToken())
     {
-        throw new NotImplementedException();
+        var tickersResult = await ExchangeData.GetTickersAsync(ct).ConfigureAwait(false);
+
+        if (!tickersResult.Success || tickersResult.Data == null || !tickersResult.Data.Data.Any())
+            return new WebCallResult<IEnumerable<Ticker>>(
+                tickersResult.ResponseStatusCode,
+                tickersResult.ResponseHeaders,
+                tickersResult.ResponseTime,
+                tickersResult.ResponseLength,
+                tickersResult.OriginalData,
+                tickersResult.RequestUrl,
+                tickersResult.RequestBody,
+                tickersResult.RequestMethod,
+                tickersResult.RequestHeaders,
+                null,
+                tickersResult.Error);
+
+        var tickers = tickersResult.Data.Data.Select(t => new Ticker
+        {
+            Symbol = t.Symbol,
+            HighPrice = decimal.TryParse(t.High, NumberStyles.Any, CultureInfo.InvariantCulture, out var highPrice) ? highPrice : (decimal?)null,
+            LowPrice = decimal.TryParse(t.Low, NumberStyles.Any, CultureInfo.InvariantCulture, out var lowPrice) ? lowPrice : (decimal?)null,
+            LastPrice = decimal.TryParse(t.Close, NumberStyles.Any, CultureInfo.InvariantCulture, out var lastPrice) ? lastPrice : (decimal?)null,
+            Volume = decimal.TryParse(t.Volume, NumberStyles.Any, CultureInfo.InvariantCulture, out var volume) ? volume : (decimal?)null,
+            // Assuming QuoteVolume and PriceChange information is available or can be derived
+            // QuoteVolume = , 
+            // PriceChange = ,
+            // PriceChangePercent = 
+        }).ToList();
+
+        return new WebCallResult<IEnumerable<Ticker>>(
+            tickersResult.ResponseStatusCode,
+            tickersResult.ResponseHeaders,
+            tickersResult.ResponseTime,
+            tickersResult.ResponseLength,
+            tickersResult.OriginalData,
+            tickersResult.RequestUrl,
+            tickersResult.RequestBody,
+            tickersResult.RequestMethod,
+            tickersResult.RequestHeaders,
+            tickers,
+            tickersResult.Error);
     }
 
     public Task<WebCallResult<IEnumerable<Kline>>> GetKlinesAsync(string symbol, TimeSpan timespan, DateTime? startTime = null, DateTime? endTime = null,
@@ -104,23 +292,65 @@ public AscendEXRestClientSpotApi(ILogger logger, HttpClient? httpClient, AscendE
     {
         throw new NotImplementedException();
     }
-    public async Task<WebCallResult<Order>> GetOrderAsync(string orderId, string? symbol = null, CancellationToken ct = new CancellationToken())
+    public async Task<WebCallResult<Order>> GetOrderAsync(string orderId, string? accountId, CancellationToken ct = new CancellationToken())
     {
-        var o = await Trading.GetSingleOrderAsync(orderId, ct).ConfigureAwait(false);;
+        if (string.IsNullOrWhiteSpace(orderId))
+            throw new ArgumentException(nameof(orderId) + " required for AscendEX " + nameof(ISpotClient.GetOrderAsync), nameof(orderId));
 
-        return o.As(new Order
+        if (string.IsNullOrWhiteSpace(accountId))
+            throw new ArgumentException(nameof(accountId) + " required for AscendEX " + nameof(ISpotClient.GetOrderAsync), nameof(accountId));
+
+        // Assuming accountId is a composite of accountGroup and accountCategory
+        var accountParts = accountId.Split(':');
+        if (accountParts.Length != 2)
+            throw new ArgumentException("Invalid accountId format. Expected format is 'accountGroup:accountCategory'", nameof(accountId));
+
+        var accountGroup = accountParts[0];
+        var accountCategory = accountParts[1];
+
+        var orderResult = await Trading.GetSingleOrderAsync(accountGroup, accountCategory, orderId, ct).ConfigureAwait(false);
+
+        if (!orderResult.Success || orderResult.Data == null || !orderResult.Data.Data.Any())
+            return new WebCallResult<Order>(
+                orderResult.ResponseStatusCode,
+                orderResult.ResponseHeaders,
+                orderResult.ResponseTime,
+                orderResult.ResponseLength,
+                orderResult.OriginalData,
+                orderResult.RequestUrl,
+                orderResult.RequestBody,
+                orderResult.RequestMethod,
+                orderResult.RequestHeaders,
+                null,
+                orderResult.Error);
+
+        var firstOrderData = orderResult.Data.Data.First();
+
+        var order = new Order
         {
-            SourceObject = o.Data,
-            Id = o.Data.Id.ToString(),
-            Timestamp = o.Data.CreatedAt,
-            Symbol = o.Data.ProductId,
-            Side = o.Data.Side == OrderSide.Buy ? CommonOrderSide.Buy : CommonOrderSide.Sell,
-            Price = o.Data.Price,
-            Quantity = o.Data.Size,
-            QuantityFilled = o.Data.FilledSize,
-            Type = GetOrderType(o.Data.Type),
-            Status = GetOrderStatus(o.Data.Status)
-        });
+            Id = firstOrderData.OrderId,
+            Symbol = firstOrderData.Symbol,
+            Side = GetCommonOrderSide(firstOrderData.Side),
+            Type = GetCommonOrderType((Enums.OrderType)Enum.Parse(typeof(Enums.OrderType), firstOrderData.OrderType, true)),
+            Price = decimal.TryParse(firstOrderData.Price, NumberStyles.Any, CultureInfo.InvariantCulture, out var price) ? price : (decimal?)null,
+            Quantity = decimal.TryParse(firstOrderData.OrderQty, NumberStyles.Any, CultureInfo.InvariantCulture, out var quantity) ? quantity : (decimal?)null,
+            QuantityFilled = decimal.TryParse(firstOrderData.CumFilledQty, NumberStyles.Any, CultureInfo.InvariantCulture, out var quantityFilled) ? quantityFilled : (decimal?)null,
+            Status = GetCommonOrderStatus((Enums.OrderStatus)Enum.Parse(typeof(Enums.OrderStatus), firstOrderData.Status, true)),
+            Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(firstOrderData.LastExecTime).DateTime
+        };
+
+        return new WebCallResult<Order>(
+            orderResult.ResponseStatusCode,
+            orderResult.ResponseHeaders,
+            orderResult.ResponseTime,
+            orderResult.ResponseLength,
+            orderResult.OriginalData,
+            orderResult.RequestUrl,
+            orderResult.RequestBody,
+            orderResult.RequestMethod,
+            orderResult.RequestHeaders,
+            order,
+            orderResult.Error);
     }
 
     public Task<WebCallResult<IEnumerable<UserTrade>>> GetOrderTradesAsync(string orderId, string? symbol = null, CancellationToken ct = new CancellationToken())
@@ -128,81 +358,68 @@ public AscendEXRestClientSpotApi(ILogger logger, HttpClient? httpClient, AscendE
         throw new NotImplementedException();
     }
 
-    public async Task<WebCallResult<IEnumerable<Order>>> GetOpenOrdersAsync(string? symbol = null, CancellationToken ct = new CancellationToken())
-    {
-        var orderInfo = await Trading.GetOpenOrdersAsync(symbol, ct: ct).ConfigureAwait(false);
-        if (!orderInfo)
-            return orderInfo.As<IEnumerable<Order>>(null);
+public async Task<WebCallResult<IEnumerable<Order>>> GetOpenOrdersAsync(string? accountId, CancellationToken ct = new CancellationToken())
+{
+    if (string.IsNullOrWhiteSpace(accountId))
+        throw new ArgumentException(nameof(accountId) + " required for AscendEX " + nameof(ISpotClient.GetOpenOrdersAsync), nameof(accountId));
 
-        return orderInfo.As(orderInfo.Data.Select(s =>
-            new Order
-            {
-                SourceObject = s,
-                Id = s.Id.ToString(),
-                Symbol = s.ProductId,
-                Side = s.Side == Enums.OrderSide.Buy ? CommonOrderSide.Buy : CommonOrderSide.Sell,
-                Price = s.Price,
-                Quantity = s.Size,
-                QuantityFilled = s.FilledSize,
-                Type = GetOrderType(s.Type),
-                Status = GetOrderStatus(s.Status),
-                Timestamp = s.CreatedAt
-            }));
-    }
-    
-    private static CommonOrderType GetOrderType(OrderType orderType)
-    {
-        return orderType switch
-        {
-            OrderType.Limit => CommonOrderType.Limit,
-            OrderType.Market => CommonOrderType.Market,
-            _ => CommonOrderType.Other
-        };
-    }
+    // Assuming accountId is a composite of accountGroup and accountCategory
+    var accountParts = accountId.Split(':');
+    if (accountParts.Length != 2)
+        throw new ArgumentException("Invalid accountId format. Expected format is 'accountGroup:accountCategory'", nameof(accountId));
 
-    private static OrderType GetOrderType(CommonOrderType orderType)
-    {
-        return orderType switch
-        {
-            CommonOrderType.Limit => OrderType.Limit,
-            CommonOrderType.Market => OrderType.Market,
-            CommonOrderType.Other => OrderType.Stop,
-            _ => throw new ArgumentOutOfRangeException(nameof(orderType), orderType, null)
-        };
-    }
+    if (!int.TryParse(accountParts[0], out var accountGroup))
+        throw new ArgumentException("Invalid accountGroup in accountId", nameof(accountId));
 
-    private static CommonOrderStatus GetOrderStatus(Enums.OrderStatus orderStatus)
+    var accountCategory = accountParts[1];
+
+    var openOrdersResult = await Trading.GetOpenOrdersAsync(accountGroup, accountCategory, ct).ConfigureAwait(false);
+
+    if (!openOrdersResult.Success || openOrdersResult.Data == null || !openOrdersResult.Data.Data.Any())
+        return new WebCallResult<IEnumerable<Order>>(
+            openOrdersResult.ResponseStatusCode,
+            openOrdersResult.ResponseHeaders,
+            openOrdersResult.ResponseTime,
+            openOrdersResult.ResponseLength,
+            openOrdersResult.OriginalData,
+            openOrdersResult.RequestUrl,
+            openOrdersResult.RequestBody,
+            openOrdersResult.RequestMethod,
+            openOrdersResult.RequestHeaders,
+            null,
+            openOrdersResult.Error);
+
+    var orders = openOrdersResult.Data.Data.Select(orderData => new Order
     {
-        switch (orderStatus)
-        {
-            case OrderStatus.Open:
-            case OrderStatus.Active:
-                return CommonOrderStatus.Active;
-            case OrderStatus.Done:
-                return CommonOrderStatus.Filled;
-            case OrderStatus.Pending:
-            case OrderStatus.Rejected:
-            case OrderStatus.Received:
-            case OrderStatus.All:
-            default:
-                return CommonOrderStatus.Canceled;
-        }
-    }
-    
-    private OrderSide GetOrderSide(CommonOrderSide side)
-    {
-        return side switch
-        {
-            CommonOrderSide.Buy => OrderSide.Buy,
-            CommonOrderSide.Sell => OrderSide.Sell,
-            _ => throw new ArgumentOutOfRangeException(nameof(side), side, null)
-        };
-    }
-    
-        
+        Id = orderData.OrderId,
+        Symbol = orderData.Symbol,
+        Side = GetCommonOrderSide(orderData.Side),
+        Type = GetCommonOrderType((Enums.OrderType)Enum.Parse(typeof(Enums.OrderType), orderData.OrderType, true)),
+        Price = decimal.TryParse(orderData.Price, NumberStyles.Any, CultureInfo.InvariantCulture, out var price) ? price : (decimal?)null,
+        Quantity = decimal.TryParse(orderData.OrderQty, NumberStyles.Any, CultureInfo.InvariantCulture, out var quantity) ? quantity : (decimal?)null,
+        QuantityFilled = decimal.TryParse(orderData.CumFilledQty, NumberStyles.Any, CultureInfo.InvariantCulture, out var quantityFilled) ? quantityFilled : (decimal?)null,
+        Status = GetCommonOrderStatus((Enums.OrderStatus)Enum.Parse(typeof(Enums.OrderStatus), orderData.Status, true)),
+        Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(orderData.LastExecTime).DateTime
+    }).ToList();
+
+    return new WebCallResult<IEnumerable<Order>>(
+        openOrdersResult.ResponseStatusCode,
+        openOrdersResult.ResponseHeaders,
+        openOrdersResult.ResponseTime,
+        openOrdersResult.ResponseLength,
+        openOrdersResult.OriginalData,
+        openOrdersResult.RequestUrl,
+        openOrdersResult.RequestBody,
+        openOrdersResult.RequestMethod,
+        openOrdersResult.RequestHeaders,
+        orders,
+        openOrdersResult.Error);
+}
+
+
     public event Action<OrderId>? OnOrderPlaced;
     public event Action<OrderId>? OnOrderCanceled;
-    
+
     internal void InvokeOrderPlaced(OrderId id)
     {
         OnOrderPlaced?.Invoke(id);
@@ -220,8 +437,8 @@ public AscendEXRestClientSpotApi(ILogger logger, HttpClient? httpClient, AscendE
 
     public async Task<WebCallResult<OrderId>> CancelOrderAsync(string orderId, string? symbol = null, CancellationToken ct = new CancellationToken())
     {
-        var order = await Trading.CancelOrderAsync(orderId, ct).ConfigureAwait(false);;
-        
+        var order = await Trading.CancelOrderAsync(orderId, ct).ConfigureAwait(false); ;
+
         var orderResult = order.As(new OrderId
         {
             SourceObject = order,
@@ -233,37 +450,19 @@ public AscendEXRestClientSpotApi(ILogger logger, HttpClient? httpClient, AscendE
     }
 
 
-    public async Task<WebCallResult<OrderId>> PlaceOrderAsync(string symbol, CommonOrderSide side, CommonOrderType type, decimal quantity, decimal? price = null,
-        string? accountId = null, string? clientOrderId = null, CancellationToken ct = new CancellationToken())
-    {
-        var order = await Trading.CreateOrderAsync(symbol, 
-            GetOrderSide(side), 
-            GetOrderType(type), 
-            quantity, price.GetValueOrDefault()).ConfigureAwait(false);
-            
-        if(!order)
-            return order.As<OrderId>(null);
-
-        return order.As(new OrderId
-        {
-            SourceObject = order,
-            Id = order.Data.Id.ToString()
-        });
-    }
-    
     internal async Task<WebCallResult<T>> SendRequestInternal<T>(Uri uri, HttpMethod method, CancellationToken cancellationToken,
         Dictionary<string, object>? parameters = null, bool signed = false, HttpMethodParameterPosition? postPosition = null,
         ArrayParametersSerialization? arraySerialization = null, int weight = 1, bool ignoreRateLimit = false) where T : class
     {
-        var result = await SendRequestAsync<T>(uri, 
-            method, cancellationToken, parameters, signed, 
-            postPosition, arraySerialization, weight, 
+        var result = await SendRequestAsync<T>(uri,
+            method, cancellationToken, parameters, signed,
+            postPosition, arraySerialization, weight,
             additionalHeaders: new Dictionary<string, string>
             {
                 { "User-Agent", Guid.NewGuid().ToString() }
             },
             ignoreRatelimit: ignoreRateLimit).ConfigureAwait(false);
-        return result;                    
+        return result;
     }
 
     public Task<WebCallResult<IEnumerable<Balance>>> GetBalancesAsync(string? accountId = null, CancellationToken ct = default)
