@@ -9,6 +9,12 @@ namespace AscendEX.Net.Objects
 
         [JsonProperty("data")]
         public List<OrderInfo> Data { get; set; }
+        
+        [JsonProperty("message")]
+        public string Message { get; set; }
+
+        [JsonProperty("reason")]
+        public string Reason { get; set; }
 
         public class OrderInfo
         {

@@ -130,57 +130,57 @@ public class AscendEXRestClientSpotApi : RestApiClient, IAscendEXRestClientSpotA
     }
 
 
-public async Task<WebCallResult<OrderId>> PlaceOrderAsync(
-    string symbol,
-    CommonOrderSide side,
-    CommonOrderType type,
-    decimal quantity,
-    decimal? price,
-    string? accountId,
-    string? clientOrderId,
-    CancellationToken ct)
-{
-    if (string.IsNullOrWhiteSpace(symbol))
-        throw new ArgumentException(nameof(symbol) + " required for AscendEX " + nameof(ISpotClient.PlaceOrderAsync), nameof(symbol));
-
-    if (string.IsNullOrWhiteSpace(accountId))
-        throw new ArgumentException(nameof(accountId) + " required for AscendEX " + nameof(ISpotClient.PlaceOrderAsync), nameof(accountId));
-
-    // Assuming accountId is a composite of accountGroup and accountCategory
-    var accountParts = accountId.Split(':');
-    if (accountParts.Length != 2)
-        throw new ArgumentException("Invalid accountId format. Expected format is 'accountGroup:accountCategory'", nameof(accountId));
-
-    if (!int.TryParse(accountParts[0], out var accountGroup))
-        throw new ArgumentException("Invalid accountGroup in accountId", nameof(accountId));
-
-    var accountCategory = accountParts[1];
-
-    var priceStr = price?.ToString();
-    var stopPriceStr = (decimal?)null; // Replace with actual stop price if needed
-
-    var order = await Trading.PlaceOrderAsync(
-        accountGroup,
-        accountCategory,
-        symbol,
-        GetOrderSide(side),
-        GetOrderType(type),
-        quantity,
-        priceStr,
-        clientOrderId,
-        stopPriceStr?.ToString(CultureInfo.InvariantCulture),
-        type == CommonOrderType.Limit ? "GTC" : null, // Assuming timeInForce for limit orders is Good Till Canceled
-        null, // respInst is null for now, can be adjusted as needed
-        ct).ConfigureAwait(false);
-
-    if (!order)
-        return order.As<OrderId>(null);
-
-    return order.As(new OrderId
+    public async Task<WebCallResult<OrderId>> PlaceOrderAsync(
+        string symbol,
+        CommonOrderSide side,
+        CommonOrderType type,
+        decimal quantity,
+        decimal? price,
+        string? accountId,
+        string? clientOrderId,
+        CancellationToken ct)
     {
-        SourceObject = order,
-    });
-}
+        if (string.IsNullOrWhiteSpace(symbol))
+            throw new ArgumentException(nameof(symbol) + " required for AscendEX " + nameof(ISpotClient.PlaceOrderAsync), nameof(symbol));
+
+        if (string.IsNullOrWhiteSpace(accountId))
+            throw new ArgumentException(nameof(accountId) + " required for AscendEX " + nameof(ISpotClient.PlaceOrderAsync), nameof(accountId));
+
+        // Assuming accountId is a composite of accountGroup and accountCategory
+        var accountParts = accountId.Split(':');
+        if (accountParts.Length != 2)
+            throw new ArgumentException("Invalid accountId format. Expected format is 'accountGroup:accountCategory'", nameof(accountId));
+
+        if (!int.TryParse(accountParts[0], out var accountGroup))
+            throw new ArgumentException("Invalid accountGroup in accountId", nameof(accountId));
+
+        var accountCategory = accountParts[1];
+
+        var priceStr = price?.ToString();
+        var stopPriceStr = (decimal?)null; // Replace with actual stop price if needed
+
+        var order = await Trading.PlaceOrderAsync(
+            accountGroup,
+            accountCategory,
+            symbol,
+            GetOrderSide(side),
+            GetOrderType(type),
+            quantity,
+            priceStr,
+            clientOrderId,
+            stopPriceStr?.ToString(CultureInfo.InvariantCulture),
+            type == CommonOrderType.Limit ? "GTC" : null, // Assuming timeInForce for limit orders is Good Till Canceled
+            null, // respInst is null for now, can be adjusted as needed
+            ct).ConfigureAwait(false);
+
+        if (!order)
+            return order.As<OrderId>(null);
+
+        return order.As(new OrderId
+        {
+            SourceObject = order,
+        });
+    }
 
 
     public async Task<WebCallResult<IEnumerable<Symbol>>> GetSymbolsAsync(CancellationToken ct = new CancellationToken())
@@ -359,65 +359,45 @@ public async Task<WebCallResult<OrderId>> PlaceOrderAsync(
     {
         throw new NotImplementedException();
     }
-
-public async Task<WebCallResult<IEnumerable<Order>>> GetOpenOrdersAsync(string? accountId, CancellationToken ct = new CancellationToken())
-{
-    if (string.IsNullOrWhiteSpace(accountId))
-        throw new ArgumentException(nameof(accountId) + " required for AscendEX " + nameof(ISpotClient.GetOpenOrdersAsync), nameof(accountId));
-
-    // Assuming accountId is a composite of accountGroup and accountCategory
-    var accountParts = accountId.Split(':');
-    if (accountParts.Length != 2)
-        throw new ArgumentException("Invalid accountId format. Expected format is 'accountGroup:accountCategory'", nameof(accountId));
-
-    if (!int.TryParse(accountParts[0], out var accountGroup))
-        throw new ArgumentException("Invalid accountGroup in accountId", nameof(accountId));
-
-    var accountCategory = accountParts[1];
-
-    var openOrdersResult = await Trading.GetOpenOrdersAsync(accountGroup, accountCategory, ct).ConfigureAwait(false);
-
-    if (!openOrdersResult.Success || openOrdersResult.Data == null || !openOrdersResult.Data.Data.Any())
-        return new WebCallResult<IEnumerable<Order>>(
-            openOrdersResult.ResponseStatusCode,
-            openOrdersResult.ResponseHeaders,
-            openOrdersResult.ResponseTime,
-            openOrdersResult.ResponseLength,
-            openOrdersResult.OriginalData,
-            openOrdersResult.RequestUrl,
-            openOrdersResult.RequestBody,
-            openOrdersResult.RequestMethod,
-            openOrdersResult.RequestHeaders,
-            null,
-            openOrdersResult.Error);
-
-    var orders = openOrdersResult.Data.Data.Select(orderData => new Order
+   public async Task<WebCallResult<IEnumerable<Order>>> GetOpenOrdersAsync(string? accountId, CancellationToken ct = new CancellationToken())
     {
-        Id = orderData.OrderId,
-        Symbol = orderData.Symbol,
-        Side = GetCommonOrderSide(orderData.Side),
-        Type = GetCommonOrderType((Enums.OrderType)Enum.Parse(typeof(Enums.OrderType), orderData.OrderType, true)),
-        Price = decimal.TryParse(orderData.Price, NumberStyles.Any, CultureInfo.InvariantCulture, out var price) ? price : (decimal?)null,
-        Quantity = decimal.TryParse(orderData.OrderQty, NumberStyles.Any, CultureInfo.InvariantCulture, out var quantity) ? quantity : (decimal?)null,
-        QuantityFilled = decimal.TryParse(orderData.CumFilledQty, NumberStyles.Any, CultureInfo.InvariantCulture, out var quantityFilled) ? quantityFilled : (decimal?)null,
-        Status = GetCommonOrderStatus((Enums.OrderStatus)Enum.Parse(typeof(Enums.OrderStatus), orderData.Status, true)),
-        Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(orderData.LastExecTime).DateTime
-    }).ToList();
+        if (string.IsNullOrWhiteSpace(accountId))
+            throw new ArgumentException(nameof(accountId) + " required for AscendEX " + nameof(GetOpenOrdersAsync), nameof(accountId));
 
-    return new WebCallResult<IEnumerable<Order>>(
-        openOrdersResult.ResponseStatusCode,
-        openOrdersResult.ResponseHeaders,
-        openOrdersResult.ResponseTime,
-        openOrdersResult.ResponseLength,
-        openOrdersResult.OriginalData,
-        openOrdersResult.RequestUrl,
-        openOrdersResult.RequestBody,
-        openOrdersResult.RequestMethod,
-        openOrdersResult.RequestHeaders,
-        orders,
-        openOrdersResult.Error);
-}
+        // Assuming accountId is a composite of accountGroup and accountCategory
+        var accountParts = accountId.Split(':');
+        if (accountParts.Length != 2)
+            throw new ArgumentException("Invalid accountId format. Expected format is 'accountGroup:accountCategory'", nameof(accountId));
 
+        if (!int.TryParse(accountParts[0], out var accountGroup))
+            throw new ArgumentException("Invalid accountGroup in accountId", nameof(accountId));
+
+        var accountCategory = accountParts[1];
+
+        var openOrdersResult = await Trading.GetOpenOrdersAsync(accountGroup, accountCategory, null, ct).ConfigureAwait(false);
+
+        if (!openOrdersResult.Success)
+        {
+            // Handle error
+            Console.WriteLine($"Failed to fetch open orders: {openOrdersResult.Error}");
+            return openOrdersResult.As<IEnumerable<Order>>(null);
+        }
+
+        var orders = openOrdersResult.Data.Data.Select(orderData => new Order
+        {
+            Id = orderData.OrderId,
+            Symbol = orderData.Symbol,
+            Side = GetCommonOrderSide(orderData.Side),
+            Type = GetCommonOrderType((Enums.OrderType)Enum.Parse(typeof(Enums.OrderType), orderData.OrderType, true)),
+            Price = decimal.TryParse(orderData.Price, NumberStyles.Any, CultureInfo.InvariantCulture, out var price) ? price : (decimal?)null,
+            Quantity = decimal.TryParse(orderData.OrderQty, NumberStyles.Any, CultureInfo.InvariantCulture, out var quantity) ? quantity : (decimal?)null,
+            QuantityFilled = decimal.TryParse(orderData.CumFilledQty, NumberStyles.Any, CultureInfo.InvariantCulture, out var quantityFilled) ? quantityFilled : (decimal?)null,
+            Status = GetCommonOrderStatus((Enums.OrderStatus)Enum.Parse(typeof(Enums.OrderStatus), orderData.Status, true)),
+            Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(orderData.LastExecTime).DateTime
+        });
+
+        return openOrdersResult.As(orders);
+    }
 
     public event Action<OrderId>? OnOrderPlaced;
     public event Action<OrderId>? OnOrderCanceled;
@@ -437,21 +417,6 @@ public async Task<WebCallResult<IEnumerable<Order>>> GetOpenOrdersAsync(string? 
         throw new NotImplementedException();
     }
 
-    public async Task<WebCallResult<OrderId>> CancelOrderAsync(string orderId, string? symbol = null, CancellationToken ct = new CancellationToken())
-    {
-        var order = await Trading.CancelOrderAsync(orderId, ct).ConfigureAwait(false); ;
-
-        var orderResult = order.As(new OrderId
-        {
-            SourceObject = order,
-            Id = order.Data.ToString(CultureInfo.InvariantCulture)
-        });
-
-        InvokeOrderCanceled(orderResult.Data);
-        return orderResult;
-    }
-
-
     internal async Task<WebCallResult<T>> SendRequestInternal<T>(Uri uri, HttpMethod method, CancellationToken cancellationToken,
         Dictionary<string, object>? parameters = null, bool signed = false, HttpMethodParameterPosition? postPosition = null,
         ArrayParametersSerialization? arraySerialization = null, int weight = 1, bool ignoreRateLimit = false) where T : class
@@ -468,6 +433,41 @@ public async Task<WebCallResult<IEnumerable<Order>>> GetOpenOrdersAsync(string? 
     }
 
     public Task<WebCallResult<IEnumerable<Balance>>> GetBalancesAsync(string? accountId = null, CancellationToken ct = default)
+    {
+        throw new NotImplementedException();
+    }
+    public async Task<WebCallResult<AscendEXCancelAllOrders>> CancelAllOrdersAsync(string accountId, string? symbol = null, CancellationToken ct = new CancellationToken())
+    {
+        // Assuming accountId is a composite of accountGroup and accountCategory
+        var accountParts = accountId.Split(':');
+        if (accountParts.Length != 2)
+            throw new ArgumentException("Invalid accountId format. Expected format is 'accountGroup:accountCategory'", nameof(accountId));
+
+        if (!int.TryParse(accountParts[0], out var accountGroup))
+            throw new ArgumentException("Invalid accountGroup in accountId", nameof(accountId));
+
+        var accountCategory = accountParts[1];
+
+        var result = await Trading.CancelAllOrdersAsync(accountGroup, accountCategory, symbol, ct).ConfigureAwait(false);
+
+        if (!result.Success)
+        {
+            // Check if the response contains an error message
+            var errorData = result.Data;
+            if (!string.IsNullOrEmpty(errorData.Message))
+            {
+                Console.WriteLine($"Order cancellation failed: {errorData.Message}");
+            }
+            else
+            {
+                Console.WriteLine($"Order cancellation failed with code: {errorData.Code}");
+            }
+        }
+
+        return result;
+    }
+
+    public Task<WebCallResult<OrderId>> CancelOrderAsync(string orderId, string? symbol = null, CancellationToken ct = default)
     {
         throw new NotImplementedException();
     }

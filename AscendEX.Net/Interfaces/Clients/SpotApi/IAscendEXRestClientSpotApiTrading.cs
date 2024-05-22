@@ -8,10 +8,8 @@ namespace AscendEX.Net.Interfaces.Clients.SpotApi;
 
 public interface IAscendEXRestClientSpotApiTrading
 {
-    Task<WebCallResult<IEnumerable<AscendEXFills>>> GetAllFillsAsync(CancellationToken ct = default);
-    Task<WebCallResult<AscendEXOpenOrdersResponse>> GetOpenOrdersAsync(int accountGroup, string accountCategory, CancellationToken ct = default);
+    Task<WebCallResult<AscendEXOpenOrdersResponse>> GetOpenOrdersAsync(int accountGroup, string accountCategory, string? symbol = null, CancellationToken ct = default);
     Task<WebCallResult<AscendEXCancelAllOrders>> CancelAllOrdersAsync(int accountGroup, string accountCategory, string? symbol = null, CancellationToken ct = default);
-    Task<WebCallResult<IEnumerable<string>>> CancelAllOrdersForProductAsync(string symbol, CancellationToken ct = default);
     Task<WebCallResult<AscendEXOrderStatusResponse>> GetSingleOrderAsync(string accountGroup, string accountCategory, string orderId, CancellationToken ct = default);
 
     Task<WebCallResult<AscendEXOrderResponse>> PlaceOrderAsync(
@@ -27,5 +25,5 @@ public interface IAscendEXRestClientSpotApiTrading
                 string? timeInForce = null,
                 string? respInst = null,
                 CancellationToken ct = new CancellationToken());
-    Task<WebCallResult<string>> CancelOrderAsync(string orderId, CancellationToken ct = default);
+    Task<WebCallResult<AscendEXCancelOrder>> CancelOrderAsync(int accountGroup, string accountCategory, string orderId, string symbol, string? id = null, CancellationToken ct = default);
 }
