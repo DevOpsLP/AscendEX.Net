@@ -38,9 +38,21 @@ namespace AscendEX.Net
             {
                 message = $"{timestamp}+order/all";
             }
+            else if (path.EndsWith("order/hist/current"))
+            {
+                message = $"{timestamp}+order/hist/current";
+            }
+            else if (path.EndsWith("v2/order/hist"))
+            {
+                message = $"{timestamp}+data/v2/order/hist";
+            }
             else if (path.EndsWith("/order/open"))
             {
                 message = $"{timestamp}+order/open";
+            }
+            else if (path.EndsWith("/order/batch"))
+            {
+                message = $"{timestamp}+order/batch";
             }
             else if (path.EndsWith("/order/status"))
             {

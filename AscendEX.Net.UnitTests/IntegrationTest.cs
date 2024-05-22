@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -9,7 +8,6 @@ using AscendEX.Net.Clients;
 using AscendEX.Net;
 using CryptoExchange.Net.Authentication;
 using AscendEX.Net.Objects;
-using AscendEX.Net.Clients.SpotApi;
 using CryptoExchange.Net.CommonObjects;
 
 public class IntegrationTest
@@ -25,7 +23,7 @@ public class IntegrationTest
     }
 
     [Fact]
-    public async Task TestPlaceAndCancelOrderAsync()
+    public async Task TestGetOrderHistoryAsync()
     {
         var apiKey = "your_key";
         var apiSecret = "Your_secret";
@@ -38,72 +36,28 @@ public class IntegrationTest
             options.ApiCredentials = new AscendEXApiCredentials(apiKey, apiSecret);
         });
 
-        // Place order
-        var placeOrderResult = await client.SpotApi.Trading.PlaceOrderAsync(
-            4, "cash", "BTC/USDT", AscendEX.Net.Enums.OrderSide.Buy, AscendEX.Net.Enums.OrderType.Limit, 0.0001m, "50000", null, null, "GTC", "ACCEPT", default
-        );
+        var account = "cash"; // or another account type
+        var symbol = "BTC/USDT";
+        var startTime = DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeMilliseconds(); // 1 day ago
+        var endTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(); // current time
+        var seqNum = (long?)null; // starting sequence number
+        var limit = 10; // number of records
 
-        if (placeOrderResult == null)
+        var result = await client.SpotApi.Trading.GetOrderHistoryAsync(account, symbol, startTime, endTime, seqNum, limit, default);
+
+        if (!result.Success)
         {
-            _logger.LogError("Place order result is null.");
-            Assert.True(false, "Place order result is null.");
-            return;
+            _logger.LogError("Failed to retrieve order history: {Error}", result.Error);
+            _logger.LogError("HTTP Status Code: {StatusCode}", result.ResponseStatusCode);
+            _logger.LogError("Error Message: {Message}", result.Error?.Message);
+            Assert.True(false, "Failed to retrieve order history.");
         }
 
-        if (!placeOrderResult.Success)
-        {
-            _logger.LogError("Failed to place order: {Error}", placeOrderResult.Error);
-            _logger.LogError("HTTP Status Code: {StatusCode}", placeOrderResult.ResponseStatusCode);
-            _logger.LogError("Error Message: {Message}", placeOrderResult.Error?.Message);
-            Assert.True(false, "Failed to place order.");
-            return;
-        }
+        Assert.NotNull(result);
+        Assert.True(result.Success, "Failed to retrieve order history.");
+        Assert.NotNull(result.Data);
 
-        var placedOrderData = placeOrderResult.Data;
-        if (placedOrderData == null)
-        {
-            _logger.LogError("Placed order data is null.");
-            Assert.True(false, "Placed order data is null.");
-            return;
-        }
-
-        var placedOrderInfo = placedOrderData.Info;
-        if (placedOrderInfo == null)
-        {
-            _logger.LogError("Placed order info is null.");
-            Assert.True(false, "Placed order info is null.");
-            return;
-        }
-
-        var orderId = placedOrderInfo.OrderId;
-        _logger.LogInformation("Order placed successfully: {OrderId}", orderId);
-
-        // Cancel order
-        var cancelOrderResult = await client.SpotApi.Trading.CancelOrderAsync(
-            4, "cash", orderId, "BTC/USDT", null, default
-        );
-
-        if (cancelOrderResult == null)
-        {
-            _logger.LogError("Cancel order result is null.");
-            Assert.True(false, "Cancel order result is null.");
-            return;
-        }
-
-        if (!cancelOrderResult.Success)
-        {
-            _logger.LogError("Failed to cancel order: {Error}", cancelOrderResult.Error);
-            _logger.LogError("HTTP Status Code: {StatusCode}", cancelOrderResult.ResponseStatusCode);
-            _logger.LogError("Error Message: {Message}", cancelOrderResult.Error?.Message);
-            Assert.True(false, "Failed to cancel order.");
-            return;
-        }
-
-        _logger.LogInformation("Order canceled successfully: {OrderId}", orderId);
-
-        Assert.NotNull(placeOrderResult);
-        Assert.True(placeOrderResult.Success, "Failed to place order.");
-        Assert.NotNull(cancelOrderResult);
-        Assert.True(cancelOrderResult.Success, "Failed to cancel order.");
+        var ordersJson = JsonConvert.SerializeObject(result.Data, Formatting.Indented);
+        _logger.LogInformation("Order History Data: {OrdersJson}", ordersJson);
     }
 }

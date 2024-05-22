@@ -145,26 +145,84 @@ namespace AscendEX.Net.Clients.SpotApi
                 HttpMethod.Get, ct, parameters).ConfigureAwait(false);
         }
 
-public async Task<WebCallResult<AscendEXCancelOrder>> CancelOrderAsync(int accountGroup, string accountCategory, string orderId, string symbol, string? id = null, CancellationToken ct = default)
-{
-    var endpoint = $"/{accountGroup}/api/pro/v1/{accountCategory}/order";
-    var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
-    var parameters = new Dictionary<string, object>
+        public async Task<WebCallResult<AscendEXCancelOrder>> CancelOrderAsync(int accountGroup, string accountCategory, string orderId, string symbol, string? id = null, CancellationToken ct = default)
+        {
+            var endpoint = $"/{accountGroup}/api/pro/v1/{accountCategory}/order";
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+            var parameters = new Dictionary<string, object>
     {
         { "orderId", orderId },
         { "symbol", symbol },
         { "time", timestamp }
     };
 
-    if (!string.IsNullOrEmpty(id))
+            if (!string.IsNullOrEmpty(id))
+            {
+                parameters.Add("id", id);
+            }
+
+            return await _baseClient.SendRequestInternal<AscendEXCancelOrder>(
+                _baseClient.GetUrl(endpoint),
+                HttpMethod.Delete, ct, parameters, true).ConfigureAwait(false);
+        }
+
+        public async Task<WebCallResult<AscendEXBatchOrderResponse>> PlaceBatchOrdersAsync(int accountGroup, string accountCategory, IEnumerable<AscendEXBatchOrder> orders, CancellationToken ct = default)
+        {
+            var endpoint = $"/{accountGroup}/api/pro/v1/{accountCategory}/order/batch";
+            var parameters = new Dictionary<string, object>
     {
-        parameters.Add("id", id);
+        { "orders", orders }
+    };
+
+            return await _baseClient.SendRequestInternal<AscendEXBatchOrderResponse>(
+                _baseClient.GetUrl(endpoint),
+                HttpMethod.Post, ct, parameters, true).ConfigureAwait(false);
+        }
+
+        public async Task<WebCallResult<AscendEXCurrentOrderHistoryResponse>> GetCurrentOrderHistoryAsync(int accountGroup, string accountCategory, int? n = null, string symbol = null, bool? executedOnly = null, CancellationToken ct = default)
+        {
+            var endpoint = $"/{accountGroup}/api/pro/v1/{accountCategory}/order/hist/current";
+            var parameters = new Dictionary<string, object>();
+
+            if (n.HasValue)
+            {
+                parameters.Add("n", n.Value);
+            }
+
+            if (!string.IsNullOrEmpty(symbol))
+            {
+                parameters.Add("symbol", symbol);
+            }
+
+            if (executedOnly.HasValue)
+            {
+                parameters.Add("executedOnly", executedOnly.Value);
+            }
+
+            return await _baseClient.SendRequestInternal<AscendEXCurrentOrderHistoryResponse>(
+                _baseClient.GetUrl(endpoint),
+                HttpMethod.Get, ct, parameters, true).ConfigureAwait(false);
+        }
+
+    public async Task<WebCallResult<AscendEXOrderHistoryResponse>> GetOrderHistoryAsync(
+        string account, string? symbol = null, long? startTime = null, long? endTime = null, long? seqNum = null, int? limit = null, CancellationToken ct = default)
+    {
+        var endpoint = $"api/pro/data/v2/order/hist";
+        var parameters = new Dictionary<string, object>
+        {
+            { "account", account }
+        };
+
+        if (!string.IsNullOrEmpty(symbol)) parameters.Add("symbol", symbol);
+        if (startTime.HasValue) parameters.Add("startTime", startTime.Value);
+        if (endTime.HasValue) parameters.Add("endTime", endTime.Value);
+        if (seqNum.HasValue) parameters.Add("seqNum", seqNum.Value);
+        if (limit.HasValue) parameters.Add("limit", limit.Value);
+
+        return await _baseClient.SendRequestInternal<AscendEXOrderHistoryResponse>(
+            _baseClient.GetUrl(endpoint),
+            HttpMethod.Get, ct, parameters, true).ConfigureAwait(false);
     }
-
-    return await _baseClient.SendRequestInternal<AscendEXCancelOrder>(
-        _baseClient.GetUrl(endpoint),
-        HttpMethod.Delete, ct, parameters, true).ConfigureAwait(false);
-}
-
+    
     }
 }

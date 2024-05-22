@@ -44,7 +44,7 @@ public class AscendEXSocketClient : BaseSocketClient, IAscendEXSocketClient
     /// </summary>
     /// <param name="loggerFactory">The logger factory</param>
     /// <param name="optionsDelegate">Option configuration delegate</param>
-    public AscendEXSocketClient(Action<AscendEXSocketOptions> optionsDelegate, ILoggerFactory? loggerFactory = null) : base(loggerFactory, "Gate.io")
+    public AscendEXSocketClient(Action<AscendEXSocketOptions> optionsDelegate, ILoggerFactory? loggerFactory = null) : base(loggerFactory, "AscendEX")
     {
         var options = AscendEXSocketOptions.Default.Copy();
         optionsDelegate(options);

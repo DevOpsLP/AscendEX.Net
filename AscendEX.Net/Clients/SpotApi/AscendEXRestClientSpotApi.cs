@@ -10,6 +10,7 @@ using CryptoExchange.Net.CommonObjects;
 using CryptoExchange.Net.Interfaces.CommonClients;
 using CryptoExchange.Net.Objects;
 using Microsoft.Extensions.Logging;
+using static AscendEX.Net.Objects.AscendEXCurrentOrderHistoryResponse;
 
 namespace AscendEX.Net.Clients.SpotApi;
 
@@ -359,7 +360,7 @@ public class AscendEXRestClientSpotApi : RestApiClient, IAscendEXRestClientSpotA
     {
         throw new NotImplementedException();
     }
-   public async Task<WebCallResult<IEnumerable<Order>>> GetOpenOrdersAsync(string? accountId, CancellationToken ct = new CancellationToken())
+    public async Task<WebCallResult<IEnumerable<Order>>> GetOpenOrdersAsync(string? accountId, CancellationToken ct = new CancellationToken())
     {
         if (string.IsNullOrWhiteSpace(accountId))
             throw new ArgumentException(nameof(accountId) + " required for AscendEX " + nameof(GetOpenOrdersAsync), nameof(accountId));
@@ -471,4 +472,86 @@ public class AscendEXRestClientSpotApi : RestApiClient, IAscendEXRestClientSpotA
     {
         throw new NotImplementedException();
     }
+
+    public async Task<WebCallResult<AscendEXBatchOrderResponse>> PlaceBatchOrdersAsync(string accountId, IEnumerable<AscendEXBatchOrder> orders, CancellationToken ct = new CancellationToken())
+    {
+        // Assuming accountId is a composite of accountGroup and accountCategory
+        var accountParts = accountId.Split(':');
+        if (accountParts.Length != 2)
+            throw new ArgumentException("Invalid accountId format. Expected format is 'accountGroup:accountCategory'", nameof(accountId));
+
+        if (!int.TryParse(accountParts[0], out var accountGroup))
+            throw new ArgumentException("Invalid accountGroup in accountId", nameof(accountId));
+
+        var accountCategory = accountParts[1];
+
+        var result = await Trading.PlaceBatchOrdersAsync(accountGroup, accountCategory, orders, ct).ConfigureAwait(false);
+
+        if (!result.Success)
+        {
+            var errorData = result.Data;
+            if (!string.IsNullOrEmpty(errorData.Message))
+            {
+                Console.WriteLine($"Batch order placement failed: {errorData.Message}");
+            }
+            else
+            {
+                Console.WriteLine($"Batch order placement failed with code: {errorData.Code}");
+            }
+        }
+
+        return result;
+    }
+
+    public async Task<WebCallResult<IEnumerable<AscendEXCurrentOrderHistoryResponse.OrderHistoryData>>> GetOrderHistoryAsync(string? accountId, int? n = null, string? symbol = null, bool? executedOnly = null, CancellationToken ct = new CancellationToken())
+    {
+        // Assuming accountId is a composite of accountGroup and accountCategory
+        var accountParts = accountId.Split(':');
+        if (accountParts.Length != 2)
+            throw new ArgumentException("Invalid accountId format. Expected format is 'accountGroup:accountCategory'", nameof(accountId));
+
+        if (!int.TryParse(accountParts[0], out var accountGroup))
+            throw new ArgumentException("Invalid accountGroup in accountId", nameof(accountId));
+
+        var accountCategory = accountParts[1];
+
+        var result = await Trading.GetCurrentOrderHistoryAsync(accountGroup, accountCategory, n, symbol, executedOnly, ct).ConfigureAwait(false);
+
+        if (!result.Success)
+        {
+            var errorData = result.Data;
+            if (!string.IsNullOrEmpty(errorData.Message))
+            {
+                Console.WriteLine($"Order history retrieval failed: {errorData.Message}");
+            }
+            else
+            {
+                Console.WriteLine($"Order history retrieval failed with code: {errorData.Code}");
+            }
+        }
+
+        return result.As<IEnumerable<AscendEXCurrentOrderHistoryResponse.OrderHistoryData>>(result.Data?.Data);
+    }
+
+    public async Task<WebCallResult<IEnumerable<AscendEXOrderHistoryResponse.OrderHistoryData>>> GetOrderHistoryAsync(
+    string account, string? symbol = null, long? startTime = null, long? endTime = null, long? seqNum = null, int? limit = null, CancellationToken ct = new CancellationToken())
+    {
+        var result = await Trading.GetOrderHistoryAsync(account, symbol, startTime, endTime, seqNum, limit, ct).ConfigureAwait(false);
+
+        if (!result.Success)
+        {
+            var errorData = result.Data;
+            if (!string.IsNullOrEmpty(result.Error?.Message))
+            {
+                Console.WriteLine($"Order history retrieval failed: {result.Error.Message}");
+            }
+            else
+            {
+                Console.WriteLine($"Order history retrieval failed with code: {result.Error?.Code}");
+            }
+        }
+
+        return result.As((IEnumerable<AscendEXOrderHistoryResponse.OrderHistoryData>?)result.Data?.Data);
+    }
+
 }
