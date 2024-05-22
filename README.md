@@ -150,6 +150,116 @@ AscendEX.Net is a .NET wrapper for the AscendEX API, created using the CryptoExc
 - **Description:** Retrieves all open orders for a specified account group and category.
 - **Response:** Returns the full response from the AscendEX API.
 
+## Orders Endpoint
+
+## Place Order
+**Endpoint:** `POST /{accountGroup}/api/pro/v1/{accountCategory}/order`
+
+**Purpose:** Place a new order.
+
+### Required Parameters:
+- **symbol**: The trading pair symbol.
+- **side**: The side of the order, either "Buy" or "Sell".
+- **orderType**: The type of the order, e.g., "Limit", "Market".
+- **orderQty**: The quantity of the order.
+- **time**: The current timestamp in milliseconds.
+
+### Optional Parameters:
+- **id**: Client-provided order ID.
+- **orderPrice**: The price for limit orders.
+- **stopPrice**: The stop price for stop orders.
+- **timeInForce**: Order time in force, e.g., "GTC", "IOC".
+- **respInst**: Response instruction, e.g., "ACK", "ACCEPT".
+
+### Example Usage:
+```csharp
+var orderResult = await client.SpotApi.Trading.PlaceOrderAsync(
+    4, "cash", "BTC/USDT", AscendEX.Net.Enums.OrderSide.Buy, AscendEX.Net.Enums.OrderType.Limit, 
+    0.001m, "50000", null, null, "GTC", "ACCEPT", default
+);
+```
+
+---
+
+## Cancel Order
+**Endpoint:** `DELETE /{accountGroup}/api/pro/v1/{accountCategory}/order`
+
+**Purpose:** Cancel an existing order.
+
+### Required Parameters:
+- **orderId**: The order ID to be canceled.
+- **symbol**: The symbol of the order to cancel.
+- **time**: The current timestamp in milliseconds.
+
+### Optional Parameters:
+- **id**: Client-provided order ID.
+
+### Example Usage:
+```csharp
+var cancelOrderResult = await client.SpotApi.Trading.CancelOrderAsync(
+    4, "cash", "orderId123", "BTC/USDT", null, default
+);
+```
+
+---
+
+## Cancel All Orders
+**Endpoint:** `DELETE /{accountGroup}/api/pro/v1/{accountCategory}/order/all`
+
+**Purpose:** Cancel all open orders.
+
+### Optional Parameters:
+- **symbol**: Symbol filter to cancel orders only for a specific symbol.
+
+### Example Usage:
+```csharp
+var cancelAllOrdersResult = await client.SpotApi.Trading.CancelAllOrdersAsync(
+    4, "cash", "BTC/USDT", default
+);
+```
+
+---
+
+## Get Open Orders
+**Endpoint:** `GET /{accountGroup}/api/pro/v1/{accountCategory}/order/open`
+
+**Purpose:** Retrieve open orders.
+
+### Optional Parameters:
+- **symbol**: Symbol filter to retrieve open orders only for a specific symbol.
+
+### Example Usage:
+```csharp
+var openOrdersResult = await client.SpotApi.Trading.GetOpenOrdersAsync(
+    4, "cash", "BTC/USDT", default
+);
+```
+
+---
+
+## Get Order History
+**Endpoint:** `GET /api/pro/data/v2/order/hist`
+
+**Purpose:** Retrieve historical orders.
+
+### Required Parameters:
+- **account**: Account type: cash/margin/futures, or actual accountId.
+
+### Optional Parameters:
+- **symbol**: Symbol filter.
+- **startTime**: Start time in milliseconds.
+- **endTime**: End time in milliseconds.
+- **seqNum**: The sequence number to search from.
+- **limit**: Number of records to return (default 500, max 1000).
+
+### Example Usage:
+```csharp
+var orderHistoryResult = await client.SpotApi.Trading.GetOrderHistoryAsync(
+    "cash", "BTC/USDT", startTime: 1622505600000, endTime: 1625097600000, seqNum: 1000, limit: 100, default
+);
+```
+
+
 ## Usage
 
 Ensure you have the correct API credentials and account group for the endpoints. You can create an instance of `AscendEXRestClient` and use its methods to interact with the API. Here is a basic example of retrieving account information:

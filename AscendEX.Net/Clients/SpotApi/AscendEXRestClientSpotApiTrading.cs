@@ -17,10 +17,6 @@ namespace AscendEX.Net.Clients.SpotApi
 {
     public class AscendEXRestClientSpotApiTrading : IAscendEXRestClientSpotApiTrading
     {
-        private const string Orders = "orders";
-        private const string Fills = "fills";
-        private const string Order = "orders/{0}?product_id={1}";
-
         private readonly AscendEXRestClientSpotApi _baseClient;
         private readonly ILogger _logger;
 
