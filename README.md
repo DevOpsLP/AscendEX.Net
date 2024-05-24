@@ -273,8 +273,187 @@ var client = new AscendEXRestClient(options =>
 var accountInfo = await client.SpotApi.Account.GetAccountInfoAsync();
 ```
 
+## Websocket
+
+### How to subscribe
+
+```csharp
+var accountGroup = "0"; // Replace with actual account group if needed or obtain it with the RestClient.Account.GetAccountInfoAsync()
+var logger = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug)).CreateLogger<AscendEXSocketClientSpotApi>(); // This is needed to log the messages 
+var client = new AscendEXSocketClientSpotApi(logger, accountGroup);
+
+// You can call ConnectToServeAsync with interval or without interval:
+
+var connectResult = await client.ConnectToServerAsync(channel, symbol, data =>
+{
+      _logger.LogInformation($"Received bar update: {data.Data}");
+      Console.WriteLine($"Received bar update: {data.Data}");
+}, CancellationToken.None);
+
+// OR
+
+var connectResult = await client.ConnectToServerAsync(channel, interval, symbol, data =>
+{
+      _logger.LogInformation($"Received bar update: {data.Data}");
+      Console.WriteLine($"Received bar update: {data.Data}");
+}, CancellationToken.None);
+
+```
+### Level 1 Order Book Data (BBO)
+For Level 1 Order Book Data you want to use ```ConnectToServerAsync(channel, symbol, data =>{ ... })```
+
+For example:
+```csharp
+var client = new AscendEXSocketClientSpotApi(logger, accountGroup);
+        try
+        {
+            var symbol = "ASD/USDT";
+            var channel = "bbo";
+
+            var connectResult = await client.ConnectToServerAsync(channel, symbol, data =>
+            {
+                _logger.LogInformation($"Received bar update: {data.Data}");
+                Console.WriteLine($"Received bar update: {data.Data}");
+            }, CancellationToken.None);
+
+            Assert.NotNull(connectResult);
+            Assert.True(connectResult.Success, "Failed to connect to the server for bars.");
+
+            if (!connectResult.Success)
+            {
+                _logger.LogError("Failed to connect to the server for bars: {Error}", connectResult.Error);
+                _logger.LogError("Error Message: {Message}", connectResult.Error?.Message);
+            }
+            else
+            {
+                _logger.LogInformation("Successfully connected to the server for bars.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Exception occurred during connection test for bars: {Exception}", ex);
+            throw;
+        }
+```
+
+### Level 2 Order Book Updates
+For Level 2 Order Book Updates you want to use ```ConnectToServerAsync(channel, symbol, data =>{ ... })```
+
+For example:
+```csharp
+var client = new AscendEXSocketClientSpotApi(logger, accountGroup);
+        try
+        {
+            var symbol = "ASD/USDT";
+            var channel = "depth";
+
+            var connectResult = await client.ConnectToServerAsync(channel, symbol, data =>
+            {
+                _logger.LogInformation($"Received bar update: {data.Data}");
+                Console.WriteLine($"Received bar update: {data.Data}");
+            }, CancellationToken.None);
+
+            Assert.NotNull(connectResult);
+            Assert.True(connectResult.Success, "Failed to connect to the server for bars.");
+
+            if (!connectResult.Success)
+            {
+                _logger.LogError("Failed to connect to the server for bars: {Error}", connectResult.Error);
+                _logger.LogError("Error Message: {Message}", connectResult.Error?.Message);
+            }
+            else
+            {
+                _logger.LogInformation("Successfully connected to the server for bars.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Exception occurred during connection test for bars: {Exception}", ex);
+            throw;
+        }
+```
+
+
+### Market Trades 
+For Market Trades you want to use ```ConnectToServerAsync(channel, symbol, data =>{ ... })```
+
+For example:
+```csharp
+var client = new AscendEXSocketClientSpotApi(logger, accountGroup);
+        try
+        {
+            var symbol = "ASD/USDT";
+            var channel = "trades";
+
+            var connectResult = await client.ConnectToServerAsync(channel, symbol, data =>
+            {
+                _logger.LogInformation($"Received bar update: {data.Data}");
+                Console.WriteLine($"Received bar update: {data.Data}");
+            }, CancellationToken.None);
+
+            Assert.NotNull(connectResult);
+            Assert.True(connectResult.Success, "Failed to connect to the server for bars.");
+
+            if (!connectResult.Success)
+            {
+                _logger.LogError("Failed to connect to the server for bars: {Error}", connectResult.Error);
+                _logger.LogError("Error Message: {Message}", connectResult.Error?.Message);
+            }
+            else
+            {
+                _logger.LogInformation("Successfully connected to the server for bars.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Exception occurred during connection test for bars: {Exception}", ex);
+            throw;
+        }
+```
+
+
+### Bar Data 
+For Bar Data you want to use ```ConnectToServerAsync(channel, interval, symbol, data =>{ ... })```
+
+For example:
+```csharp
+        try
+        {
+            var interval = "1"; // Example interval
+            var symbol = "ASD/USDT";
+            var channel = "bar";
+
+            var connectResult = await client.ConnectToServerAsync(channel, interval, symbol, data =>
+            {
+                _logger.LogInformation($"Received bar update: {data.Data}");
+                Console.WriteLine($"Received bar update: {data.Data}");
+            }, CancellationToken.None);
+
+            Assert.NotNull(connectResult);
+            Assert.True(connectResult.Success, "Failed to connect to the server for bars.");
+
+            if (!connectResult.Success)
+            {
+                _logger.LogError("Failed to connect to the server for bars: {Error}", connectResult.Error);
+                _logger.LogError("Error Message: {Message}", connectResult.Error?.Message);
+            }
+            else
+            {
+                _logger.LogInformation("Successfully connected to the server for bars.");
+            }
+
+            // Wait for a while to verify the connection and log any received messages
+            await Task.Delay(30000);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Exception occurred during connection test for bars: {Exception}", ex);
+            throw;
+        }
+```
+
 ## Installation
 
-To use AscendEX.Net, include it in your project by referencing the necessary packages and libraries. Ensure you have the CryptoExchange.Net dependency installed.
+To use AscendEX.Net, this runs in C# v11. include it in your project by referencing the necessary packages and libraries. Ensure you have the CryptoExchange.Net dependency installed.
 
 For further details, refer to the official AscendEX API documentation.
