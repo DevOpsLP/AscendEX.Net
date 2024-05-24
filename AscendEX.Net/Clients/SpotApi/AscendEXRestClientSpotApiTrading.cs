@@ -65,9 +65,9 @@ namespace AscendEX.Net.Clients.SpotApi
             Enums.OrderSide side,
             Enums.OrderType type,
             decimal? quantity = null,
-            string price = null,
+            string? price = null,
             string? clientOrderId = null,
-            string stopPrice = null,
+            string? stopPrice = null,
             string? timeInForce = null,
             string? respInst = null,
             long? time = null,
@@ -200,25 +200,25 @@ namespace AscendEX.Net.Clients.SpotApi
                 HttpMethod.Get, ct, parameters, true).ConfigureAwait(false);
         }
 
-    public async Task<WebCallResult<AscendEXOrderHistoryResponse>> GetOrderHistoryAsync(
-        string account, string? symbol = null, long? startTime = null, long? endTime = null, long? seqNum = null, int? limit = null, CancellationToken ct = default)
-    {
-        var endpoint = $"api/pro/data/v2/order/hist";
-        var parameters = new Dictionary<string, object>
+        public async Task<WebCallResult<AscendEXOrderHistoryResponse>> GetOrderHistoryAsync(
+            string account, string? symbol = null, long? startTime = null, long? endTime = null, long? seqNum = null, int? limit = null, CancellationToken ct = default)
+        {
+            var endpoint = $"api/pro/data/v2/order/hist";
+            var parameters = new Dictionary<string, object>
         {
             { "account", account }
         };
 
-        if (!string.IsNullOrEmpty(symbol)) parameters.Add("symbol", symbol);
-        if (startTime.HasValue) parameters.Add("startTime", startTime.Value);
-        if (endTime.HasValue) parameters.Add("endTime", endTime.Value);
-        if (seqNum.HasValue) parameters.Add("seqNum", seqNum.Value);
-        if (limit.HasValue) parameters.Add("limit", limit.Value);
+            if (!string.IsNullOrEmpty(symbol)) parameters.Add("symbol", symbol);
+            if (startTime.HasValue) parameters.Add("startTime", startTime.Value);
+            if (endTime.HasValue) parameters.Add("endTime", endTime.Value);
+            if (seqNum.HasValue) parameters.Add("seqNum", seqNum.Value);
+            if (limit.HasValue) parameters.Add("limit", limit.Value);
 
-        return await _baseClient.SendRequestInternal<AscendEXOrderHistoryResponse>(
-            _baseClient.GetUrl(endpoint),
-            HttpMethod.Get, ct, parameters, true).ConfigureAwait(false);
-    }
-    
+            return await _baseClient.SendRequestInternal<AscendEXOrderHistoryResponse>(
+                _baseClient.GetUrl(endpoint),
+                HttpMethod.Get, ct, parameters, true).ConfigureAwait(false);
+        }
+
     }
 }

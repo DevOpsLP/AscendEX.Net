@@ -1,9 +1,14 @@
-namespace AscendEX.Net.Interfaces.Clients.SpotAndMarginApi;
+using System.Threading;
+using System.Threading.Tasks;
+using CryptoExchange.Net.Objects;
+using CryptoExchange.Net.Sockets;
+using Newtonsoft.Json.Linq;
 
-public interface IAscendEXSocketClientSpotApi
+namespace AscendEX.Net.Interfaces.Clients.SpotApi
 {
-    /// <summary>
-    /// Exchange data streams and queries
-    /// </summary>
-    IAscendEXSocketSpotApiExchangeData ExchangeData { get; }
+    public interface IAscendEXSocketClientSpotApi
+    {
+    Task<CallResult<UpdateSubscription>> ConnectToServerAsync(string channel, string symbol, Action<DataEvent<JToken>> handler, CancellationToken ct = default);
+
+    }
 }

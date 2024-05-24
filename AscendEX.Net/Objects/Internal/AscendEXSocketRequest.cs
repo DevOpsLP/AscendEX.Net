@@ -1,13 +1,8 @@
-using Newtonsoft.Json;
-
-namespace AscendEX.Net.Objects.Internal;
-
-public class AscendEXSocketRequest
+namespace AscendEX.Net.Objects.Internal
 {
-    [JsonProperty("type")]
-    public string Type { get; set; }
-    [JsonProperty("product_ids")]
-    public IEnumerable<string> ProductIds { get; set; }
-    [JsonProperty("channels")]
-    public IEnumerable<string> Channels { get; set; }
+    public class AscendEXSocketRequest
+    {
+        public string Op { get; set; }
+        public Dictionary<string, string>[] Args { get; set; }
+    }
 }

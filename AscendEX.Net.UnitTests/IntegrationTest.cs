@@ -1,63 +1,65 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using Xunit;
-using AscendEX.Net.Clients;
-using AscendEX.Net;
-using CryptoExchange.Net.Authentication;
-using AscendEX.Net.Objects;
-using CryptoExchange.Net.CommonObjects;
+using AscendEX.Net.Clients.SpotApi;
+using CryptoExchange.Net.Objects;
+using Newtonsoft.Json.Linq;
 
-public class IntegrationTest
+public class AscendEXSocketTests
 {
-    private readonly ILogger<IntegrationTest> _logger;
+    private readonly ILogger<AscendEXSocketTests> _logger;
 
-    public IntegrationTest()
+    public AscendEXSocketTests()
     {
         var serviceCollection = new ServiceCollection();
-        serviceCollection.AddLogging(builder => builder.AddConsole());
+        serviceCollection.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
         var serviceProvider = serviceCollection.BuildServiceProvider();
-        _logger = serviceProvider.GetRequiredService<ILogger<IntegrationTest>>();
+        _logger = serviceProvider.GetRequiredService<ILogger<AscendEXSocketTests>>();
     }
 
     [Fact]
-    public async Task TestGetOrderHistoryAsync()
+    public async Task TestConnectToServerForBarsAsync()
     {
-        var apiKey = "your_key";
-        var apiSecret = "Your_secret";
+        var accountGroup = "0"; // Replace with actual account group if needed
+        var logger = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug)).CreateLogger<AscendEXSocketClientSpotApi>();
+        var client = new AscendEXSocketClientSpotApi(logger, accountGroup);
 
-        Assert.False(string.IsNullOrEmpty(apiKey), "API Key is not set.");
-        Assert.False(string.IsNullOrEmpty(apiSecret), "API Secret is not set.");
-
-        var client = new AscendEXRestClient(options =>
+        _logger.LogInformation("Starting connection test to WebSocket server for bars");
+        try
         {
-            options.ApiCredentials = new AscendEXApiCredentials(apiKey, apiSecret);
-        });
+            var interval = "1"; // Example interval
+            var symbol = "ASD/USDT";
+            var channel = "bar";
 
-        var account = "cash"; // or another account type
-        var symbol = "BTC/USDT";
-        var startTime = DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeMilliseconds(); // 1 day ago
-        var endTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(); // current time
-        var seqNum = (long?)null; // starting sequence number
-        var limit = 10; // number of records
+            var connectResult = await client.ConnectToServerAsync(channel, interval, symbol, data =>
+            {
+                _logger.LogInformation($"Received bar update: {data.Data}");
+                Console.WriteLine($"Received bar update: {data.Data}");
+            }, CancellationToken.None);
 
-        var result = await client.SpotApi.Trading.GetOrderHistoryAsync(account, symbol, startTime, endTime, seqNum, limit, default);
+            Assert.NotNull(connectResult);
+            Assert.True(connectResult.Success, "Failed to connect to the server for bars.");
 
-        if (!result.Success)
-        {
-            _logger.LogError("Failed to retrieve order history: {Error}", result.Error);
-            _logger.LogError("HTTP Status Code: {StatusCode}", result.ResponseStatusCode);
-            _logger.LogError("Error Message: {Message}", result.Error?.Message);
-            Assert.True(false, "Failed to retrieve order history.");
+            if (!connectResult.Success)
+            {
+                _logger.LogError("Failed to connect to the server for bars: {Error}", connectResult.Error);
+                _logger.LogError("Error Message: {Message}", connectResult.Error?.Message);
+            }
+            else
+            {
+                _logger.LogInformation("Successfully connected to the server for bars.");
+            }
+
+            // Wait for a while to verify the connection and log any received messages
+            await Task.Delay(30000);
         }
-
-        Assert.NotNull(result);
-        Assert.True(result.Success, "Failed to retrieve order history.");
-        Assert.NotNull(result.Data);
-
-        var ordersJson = JsonConvert.SerializeObject(result.Data, Formatting.Indented);
-        _logger.LogInformation("Order History Data: {OrdersJson}", ordersJson);
+        catch (Exception ex)
+        {
+            _logger.LogError("Exception occurred during connection test for bars: {Exception}", ex);
+            throw;
+        }
     }
 }

@@ -72,8 +72,8 @@ public static class AscendEXHelpers
         if (string.IsNullOrEmpty(symbolString))
             throw new ArgumentException("Symbol is not provided");
 
-        if (!Regex.IsMatch(symbolString, "^[a-zA-Z0-9]{2,}-[a-zA-Z0-9]{3,5}$"))
+        if (!Regex.IsMatch(symbolString, "^[a-zA-Z0-9]{2,}/[a-zA-Z0-9]{3,5}$"))
             throw new ArgumentException(
-                $"{symbolString} is not a valid AscendEX symbol. Should be [BaseAsset]-[QuoteAsset], e.g. BTC-USDT");
+                $"{symbolString} is not a valid AscendEX symbol. Should be [BaseAsset]/[QuoteAsset], e.g. BTC/USDT");
     }
 }

@@ -1,8 +1,9 @@
-using AscendEX.Net.Interfaces.Clients.SpotAndMarginApi;
+using AscendEX.Net.Interfaces.Clients.SpotApi;
 
-namespace AscendEX.Net.Interfaces.Clients;
-
-public interface IAscendEXSocketClient
+namespace AscendEX.Net.Interfaces.Clients
 {
-    IAscendEXSocketClientSpotApi SpotApi { get; set; }
+    public interface IAscendEXSocketClient
+    {
+        IAscendEXSocketClientSpotApi SpotApi { get; }
+    }
 }

@@ -5,6 +5,7 @@ using AscendEX.Net.Interfaces.Clients;
 using AscendEX.Net.Interfaces.Clients.SpotAndMarginApi;
 using AscendEX.Net.Objects.Options;
 using Microsoft.Extensions.Logging;
+using AscendEX.Net.Interfaces.Clients.SpotApi;
 
 namespace AscendEX.Net.Clients;
 
@@ -50,7 +51,7 @@ public class AscendEXSocketClient : BaseSocketClient, IAscendEXSocketClient
         optionsDelegate(options);
         Initialize(options);
 
-        SpotApi = AddApiClient(new AscendEXSocketSpotApi(_logger, options));
+        SpotApi = AddApiClient(new AscendEXSocketClientSpotApi(_logger));
     }
     #endregion
     
