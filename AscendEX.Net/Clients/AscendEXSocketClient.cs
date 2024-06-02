@@ -2,10 +2,9 @@ using AscendEX.Net.Clients.SpotApi;
 using CryptoExchange.Net;
 using CryptoExchange.Net.Authentication;
 using AscendEX.Net.Interfaces.Clients;
-using AscendEX.Net.Interfaces.Clients.SpotAndMarginApi;
+using AscendEX.Net.Interfaces.Clients.SpotApi;
 using AscendEX.Net.Objects.Options;
 using Microsoft.Extensions.Logging;
-using AscendEX.Net.Interfaces.Clients.SpotApi;
 
 namespace AscendEX.Net.Clients;
 
@@ -19,40 +18,45 @@ public class AscendEXSocketClient : BaseSocketClient, IAscendEXSocketClient
     
     #endregion
     
-    public AscendEXSocketClient(ILoggerFactory? logger, string name) : base(logger, name)
+    #region constructor/destructor
+    
+    /// <summary>
+    /// Create a new instance of AscendEXSocketClient
+    /// </summary>
+    /// <param name="loggerFactory">The logger factory</param>
+    public AscendEXSocketClient(ILoggerFactory? loggerFactory = null) : this(AscendEXSocketOptions.Default, loggerFactory)
+    {
+    }
+
+    /// <summary>
+    /// Create a new instance of AscendEXSocketClient
+    /// </summary>
+    /// <param name="options">The client options</param>
+    /// <param name="loggerFactory">The logger factory</param>
+    public AscendEXSocketClient(AscendEXSocketOptions options, ILoggerFactory? loggerFactory = null) : base(loggerFactory, "AscendEX")
+    {
+        Initialize(options);
+
+        var logger = loggerFactory?.CreateLogger<AscendEXSocketClientSpotApi>();
+        SpotApi = new AscendEXSocketClientSpotApi(logger, options);
+    }
+
+    /// <summary>
+    /// Create a new instance of AscendEXSocketClient
+    /// </summary>
+    /// <param name="optionsDelegate">Option configuration delegate</param>
+    /// <param name="loggerFactory">The logger factory</param>
+    public AscendEXSocketClient(Action<AscendEXSocketOptions> optionsDelegate, ILoggerFactory? loggerFactory = null) : this(GetOptions(optionsDelegate), loggerFactory)
     {
     }
     
-    #region constructor/destructor
-    /// <summary>
-    /// Create a new instance of BinanceSocketClient
-    /// </summary>
-    /// <param name="loggerFactory">The logger factory</param>
-    public AscendEXSocketClient(ILoggerFactory? loggerFactory = null) : this((x) => { }, loggerFactory)
-    {
-    }
-
-    /// <summary>
-    /// Create a new instance of BinanceSocketClient
-    /// </summary>
-    /// <param name="optionsDelegate">Option configuration delegate</param>
-    public AscendEXSocketClient(Action<AscendEXSocketOptions> optionsDelegate) : this(optionsDelegate, null)
-    {
-    }
-
-    /// <summary>
-    /// Create a new instance of GateioSocketClient
-    /// </summary>
-    /// <param name="loggerFactory">The logger factory</param>
-    /// <param name="optionsDelegate">Option configuration delegate</param>
-    public AscendEXSocketClient(Action<AscendEXSocketOptions> optionsDelegate, ILoggerFactory? loggerFactory = null) : base(loggerFactory, "AscendEX")
+    private static AscendEXSocketOptions GetOptions(Action<AscendEXSocketOptions> optionsDelegate)
     {
         var options = AscendEXSocketOptions.Default.Copy();
         optionsDelegate(options);
-        Initialize(options);
-
-        SpotApi = AddApiClient(new AscendEXSocketClientSpotApi(_logger));
+        return options;
     }
+    
     #endregion
     
     /// <summary>
@@ -69,5 +73,7 @@ public class AscendEXSocketClient : BaseSocketClient, IAscendEXSocketClient
     /// <inheritdoc />
     public void SetApiCredentials(ApiCredentials credentials)
     {
+        SpotApi.SetApiCredentials(credentials);
     }
+    
 }

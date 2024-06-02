@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -17,6 +16,10 @@ namespace AscendEX.Net
         public AscendEXAuthenticationProvider(AscendEXApiCredentials credentials) : base(credentials)
         {
             _credentials = credentials;
+        }
+
+        public AscendEXAuthenticationProvider(ApiCredentials credentials) : base(credentials)
+        {
         }
 
         public override void AuthenticateRequest(RestApiClient apiClient, Uri uri, HttpMethod method, Dictionary<string, object> providedParameters, bool auth,
@@ -85,10 +88,7 @@ namespace AscendEX.Net
                 message = $"{timestamp}+{path.Split('/').Last()}";
             }
 
-            Console.WriteLine($"Signing message: {message}");
-
             var signature = GetSignHmacsha256(message, _credentials.Secret.GetString());
-            Console.WriteLine($"Signature: {signature}");
 
             headers.Add("x-auth-key", _credentials.Key.GetString());
             headers.Add("x-auth-signature", signature);
@@ -101,6 +101,26 @@ namespace AscendEX.Net
             using var hmacsha256 = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
             var hash = hmacsha256.ComputeHash(Encoding.UTF8.GetBytes(message));
             return Convert.ToBase64String(hash);
+        }
+        public Dictionary<string, string> AuthenticateSocketParameters()
+        {
+            var timestamp = GetCurrentTimestamp().ToString();
+            var message = $"{timestamp}+stream";
+            var signature = GetSignHmacsha256(message, _credentials.Secret.GetString());
+
+            var headers = new Dictionary<string, string>
+            {
+                { "x-auth-key", _credentials.Key.GetString() },
+                { "x-auth-signature", signature },
+                { "x-auth-timestamp", timestamp }
+            };
+
+            return headers;
+        }
+
+        public long GetCurrentTimestamp()
+        {
+            return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         }
     }
 }
