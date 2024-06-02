@@ -452,8 +452,149 @@ For example:
         }
 ```
 
+## TRADING (WebSocket)
+
+### Place Order
+
+Same requirements as RestAPI
+
+Example:
+
+```csharp
+        var accountGroup = "4"; // Replace with actual account group if needed
+        var accountCategory = "cash"; // Example account category
+        var logger = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug)).CreateLogger<AscendEXSocketClientSpotApi>();
+        var clientOptions = new AscendEXSocketOptions
+        {
+            ApiCredentials = new AscendEXApiCredentials(apiKey, apiSecret)
+        };
+        var client = new AscendEXSocketClientSpotApi(logger, clientOptions, accountGroup);
+
+        _logger.LogInformation("Starting test for placing an order via WebSocket");
+
+        try
+        {
+            var symbol = "BTC/USDT";
+            var side = OrderSide.Buy;
+            var orderType = OrderType.Limit;
+            var quantity = 0.00016m;
+            var price = "55000";
+            var clientOrderId = Guid.NewGuid().ToString();
+            var stopPrice = (string?)null;
+            var timeInForce = (string?)null;
+            var respInst = "ACK";
+            var ct = new CancellationToken();
+
+            var result = await client.Trading.PlaceOrderAsync(
+                accountCategory,
+                symbol,
+                side,
+                orderType,
+                quantity,
+                price,
+                stopPrice,
+                timeInForce,
+                respInst,
+                ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Exception occurred during order placement test: {Exception}", ex);
+            throw;
+        }
+```
+
+### Cancel Order
+
+Same as RestAPI conditions
+
+```csharp
+    var result = await tradingClient.CancelOrderAsync("cash", "ETH/USDT", "16e83845dcdsimtrader00008c645f67", ct: CancellationToken.None);
+    if (result.Success)
+    {
+        Console.WriteLine("Order canceled successfully.");
+    }
+    else
+    {
+        Console.WriteLine($"Failed to cancel order: {result.Error}");
+    }
+```
+
+### Cancel all order
+
+Here you can directly cancel all open orders or you can cancel all open orders for specific symbol or symbols
+
+```csharp
+    var result1 = await tradingClient.CancelAllOrdersAsync(ct: CancellationToken.None);
+    if (result1.Success)
+    {
+        Console.WriteLine("All orders canceled successfully.");
+    }
+    else
+    {
+        Console.WriteLine($"Failed to cancel all orders: {result1.Error}");
+    }
+```
+or
+
+```csharp
+    var result2 = await tradingClient.CancelAllOrdersAsync("cash", "BTC/USDT", ct: CancellationToken.None);
+    if (result2.Success)
+    {
+        Console.WriteLine("All orders for BTC/USDT canceled successfully.");
+    }
+    else
+    {
+        Console.WriteLine($"Failed to cancel all orders for BTC/USDT: {result2.Error}");
+    }
+```
+
+### Query Open order
+
+Here you can query a single order by ID or query all open orders, or all open orders in symbol/symbols
+
+Query all open orders
+```csharp
+var result1 = await tradingClient.QueryOpenOrdersAsync("cash", ct: CancellationToken.None);
+if (result1.Success)
+{
+    Console.WriteLine("Queried all open orders successfully.");
+}
+else
+{
+    Console.WriteLine($"Failed to query open orders: {result1.Error}");
+}
+```
+
+Query open orders for a specific symbol
+
+```csharp
+var result2 = await tradingClient.QueryOpenOrdersAsync("cash", "BTC/USDT", ct: CancellationToken.None);
+if (result2.Success)
+{
+    Console.WriteLine("Queried open orders for BTC/USDT successfully.");
+}
+else
+{
+    Console.WriteLine($"Failed to query open orders for BTC/USDT: {result2.Error}");
+}
+```
+
+Query open orders for multiple symbols
+```csharp
+var result3 = await tradingClient.QueryOpenOrdersAsync("cash", "BTC/USDT,ETH/USDT", ct: CancellationToken.None);
+if (result3.Success)
+{
+    Console.WriteLine("Queried open orders for BTC/USDT and ETH/USDT successfully.");
+}
+else
+{
+    Console.WriteLine($"Failed to query open orders for BTC/USDT and ETH/USDT: {result3.Error}");
+}
+```
+
 ## Installation
 
-To use AscendEX.Net, this runs in C# v11. include it in your project by referencing the necessary packages and libraries. Ensure you have the CryptoExchange.Net dependency installed.
+To use AscendEX.Net, this runs in C# v12. include it in your project by referencing the necessary packages and libraries. Ensure you have the CryptoExchange.Net dependency installed.
 
 For further details, refer to the official AscendEX API documentation.
