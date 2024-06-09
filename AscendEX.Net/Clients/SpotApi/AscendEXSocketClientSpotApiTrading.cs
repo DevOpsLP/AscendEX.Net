@@ -6,6 +6,7 @@ using AscendEX.Net.Enums;
 using AscendEX.Net.Interfaces.Clients.SpotApi;
 using AscendEX.Net.Objects.Models;
 using CryptoExchange.Net.Objects;
+using CryptoExchange.Net.Objects.Sockets;
 using CryptoExchange.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
@@ -23,51 +24,51 @@ namespace AscendEX.Net.Clients.SpotApi
             _client = client;
         }
 
-        public async Task<CallResult<UpdateSubscription>> PlaceOrderAsync(
-            string accountCategory,
-            string symbol,
-            Enums.OrderSide side,
-            Enums.OrderType type,
-            decimal quantity,
-            string? price = null,
-            string? stopPrice = null,
-            string? timeInForce = null,
-            string? respInst = null,
-            CancellationToken ct = default)
+public async Task<CallResult<UpdateSubscription>> PlaceOrderAsync(
+    string accountCategory,
+    string symbol,
+    Enums.OrderSide side,
+    Enums.OrderType type,
+    decimal quantity,
+    string? price = null,
+    string? stopPrice = null,
+    string? timeInForce = null,
+    string? respInst = null,
+    CancellationToken ct = default)
+{
+    var currentTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+    var orderRequest = new
+    {
+        op = "req",
+        action = "place-order",
+        account = accountCategory,
+        args = new
         {
-            var currentTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-
-            var orderRequest = new
-            {
-                op = "req",
-                action = "place-order",
-                account = accountCategory,
-                args = new
-                {
-                    time = currentTime,
-                    symbol = symbol,
-                    orderPrice = price ?? "0",
-                    orderQty = quantity.ToString(CultureInfo.InvariantCulture),
-                    orderType = type.ToString().ToLower(),
-                    side = side.ToString().ToLower(),
-                    postOnly = false,
-                    respInst = respInst ?? "ACK"
-                }
-            };
-
-            return await _client.SubscribeToOrderAsync<JToken>(orderRequest, "place-order", true, data =>
-            {
-                _logger.LogInformation($"Order placed: {data.Data}");
-                Console.WriteLine($"Order placed: {data.Data}");
-            }, ct).ConfigureAwait(false);
+            time = currentTime,
+            symbol = symbol,
+            orderPrice = price ?? "0",
+            orderQty = quantity.ToString(CultureInfo.InvariantCulture),
+            orderType = type.ToString().ToLower(),
+            side = side.ToString().ToLower(),
+            postOnly = false,
+            respInst = respInst ?? "ACK"
         }
+    };
 
-           public async Task<CallResult<UpdateSubscription>> CancelOrderAsync(
-            string accountCategory,
-            string symbol,
-            string orderId,
-            string? clientOrderId = null,
-            CancellationToken ct = default)
+    return await _client.SubscribeToOrderAsync(orderRequest, "place-order", true, data =>
+    {
+        _logger.LogInformation($"Order placed: {data}");
+        Console.WriteLine($"Order placed: {data}");
+    }, ct).ConfigureAwait(false);
+}
+
+        public async Task<CallResult<UpdateSubscription>> CancelOrderAsync(
+         string accountCategory,
+         string symbol,
+         string orderId,
+         string? clientOrderId = null,
+         CancellationToken ct = default)
         {
             var currentTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -85,10 +86,10 @@ namespace AscendEX.Net.Clients.SpotApi
                 }
             };
 
-            return await _client.SubscribeToOrderAsync<JToken>(cancelRequest, "cancel-Order", true, data =>
+            return await _client.SubscribeToOrderAsync(cancelRequest, "cancel-Order", true, data =>
             {
-                _logger.LogInformation($"Order canceled: {data.Data}");
-                Console.WriteLine($"Order canceled: {data.Data}");
+                _logger.LogInformation($"Order canceled: {data}");
+                Console.WriteLine($"Order canceled: {data}");
             }, ct).ConfigureAwait(false);
         }
 
@@ -102,10 +103,10 @@ namespace AscendEX.Net.Clients.SpotApi
                 args = new { }
             };
 
-            return await _client.SubscribeToOrderAsync<JToken>(cancelAllRequest, "cancel-All", true, data =>
+            return await _client.SubscribeToOrderAsync(cancelAllRequest, "cancel-All", true, data =>
             {
-                _logger.LogInformation($"All orders canceled: {data.Data}");
-                Console.WriteLine($"All orders canceled: {data.Data}");
+                _logger.LogInformation($"All orders canceled: {data}");
+                Console.WriteLine($"All orders canceled: {data}");
             }, ct).ConfigureAwait(false);
         }
 
@@ -125,17 +126,17 @@ namespace AscendEX.Net.Clients.SpotApi
                 }
             };
 
-            return await _client.SubscribeToOrderAsync<JToken>(cancelAllRequest, "cancel-All", true, data =>
+            return await _client.SubscribeToOrderAsync(cancelAllRequest, "cancel-All", true, data =>
             {
-                _logger.LogInformation($"All orders for symbol {symbol} canceled: {data.Data}");
-                Console.WriteLine($"All orders for symbol {symbol} canceled: {data.Data}");
+                _logger.LogInformation($"All orders for symbol {symbol} canceled: {data}");
+                Console.WriteLine($"All orders for symbol {symbol} canceled: {data}");
             }, ct).ConfigureAwait(false);
         }
 
-         public async Task<CallResult<UpdateSubscription>> QueryOpenOrdersAsync(
-            string accountCategory,
-            string? symbols = null,
-            CancellationToken ct = default)
+        public async Task<CallResult<UpdateSubscription>> QueryOpenOrdersAsync(
+           string accountCategory,
+           string? symbols = null,
+           CancellationToken ct = default)
         {
             dynamic args;
             if (string.IsNullOrEmpty(symbols))
@@ -155,10 +156,10 @@ namespace AscendEX.Net.Clients.SpotApi
                 args = args
             };
 
-            return await _client.SubscribeToOrderAsync<JToken>(queryOpenOrdersRequest, "open-order", true, data =>
+            return await _client.SubscribeToOrderAsync(queryOpenOrdersRequest, "open-order", true, data =>
             {
-                _logger.LogInformation($"Open orders: {data.Data}");
-                Console.WriteLine($"Open orders: {data.Data}");
+                _logger.LogInformation($"Open orders: {data}");
+                Console.WriteLine($"Open orders: {data}");
             }, ct).ConfigureAwait(false);
         }
 

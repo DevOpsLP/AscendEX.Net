@@ -1,5 +1,6 @@
 ﻿using AscendEX.Net.Enums;
 using CryptoExchange.Net.Converters;
+using CryptoExchange.Net.Converters.JsonNet;
 using System.Collections.Generic;
 
 namespace AscendEX.Net.Converters

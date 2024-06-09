@@ -6,6 +6,7 @@ using AscendEX.Net.Objects;
 using AscendEX.Net.Objects.Options;
 using CryptoExchange.Net;
 using CryptoExchange.Net.Authentication;
+using CryptoExchange.Net.Clients;
 using CryptoExchange.Net.CommonObjects;
 using CryptoExchange.Net.Interfaces.CommonClients;
 using CryptoExchange.Net.Objects;
@@ -199,86 +200,97 @@ public class AscendEXRestClientSpotApi : RestApiClient, IAscendEXRestClientSpotA
             }));
     }
 
-    public async Task<WebCallResult<Ticker>> GetTickerAsync(string symbol, CancellationToken ct = new CancellationToken())
+public async Task<WebCallResult<Ticker>> GetTickerAsync(string symbol, CancellationToken ct = new CancellationToken())
+{
+    var tickerResult = await ExchangeData.GetTickerAsync(symbol, ct).ConfigureAwait(false);
+
+    if (!tickerResult.Success || tickerResult.Data == null || !tickerResult.Data.Data.Any())
     {
-        var tickerResult = await ExchangeData.GetTickerAsync(symbol, ct).ConfigureAwait(false);
-
-        if (!tickerResult.Success || tickerResult.Data == null || !tickerResult.Data.Data.Any())
-            return tickerResult.As<Ticker>(null);
-
-        var firstTicker = tickerResult.Data.Data.First();
-
-        var ticker = new Ticker
-        {
-            Symbol = firstTicker.Symbol,
-            HighPrice = decimal.TryParse(firstTicker.High, NumberStyles.Any, CultureInfo.InvariantCulture, out var highPrice) ? highPrice : (decimal?)null,
-            LowPrice = decimal.TryParse(firstTicker.Low, NumberStyles.Any, CultureInfo.InvariantCulture, out var lowPrice) ? lowPrice : (decimal?)null,
-            LastPrice = decimal.TryParse(firstTicker.Close, NumberStyles.Any, CultureInfo.InvariantCulture, out var lastPrice) ? lastPrice : (decimal?)null,
-            Volume = decimal.TryParse(firstTicker.Volume, NumberStyles.Any, CultureInfo.InvariantCulture, out var volume) ? volume : (decimal?)null,
-            // Assuming QuoteVolume and PriceChange information is available or can be derived
-            // QuoteVolume = , 
-            // PriceChange = ,
-            // PriceChangePercent = 
-        };
-
         return new WebCallResult<Ticker>(
             tickerResult.ResponseStatusCode,
             tickerResult.ResponseHeaders,
             tickerResult.ResponseTime,
             tickerResult.ResponseLength,
             tickerResult.OriginalData,
+            tickerResult.RequestId,
             tickerResult.RequestUrl,
             tickerResult.RequestBody,
             tickerResult.RequestMethod,
             tickerResult.RequestHeaders,
-            ticker,
-            tickerResult.Error);
+            null, // Data is null
+            tickerResult.Error); // Ensure the error is passed
     }
 
-    public async Task<WebCallResult<IEnumerable<Ticker>>> GetTickersAsync(CancellationToken ct = new CancellationToken())
+    var firstTicker = tickerResult.Data.Data.First();
+
+    var ticker = new Ticker
     {
-        var tickersResult = await ExchangeData.GetTickersAsync(ct).ConfigureAwait(false);
+        Symbol = firstTicker.Symbol,
+        HighPrice = decimal.TryParse(firstTicker.High, NumberStyles.Any, CultureInfo.InvariantCulture, out var highPrice) ? highPrice : (decimal?)null,
+        LowPrice = decimal.TryParse(firstTicker.Low, NumberStyles.Any, CultureInfo.InvariantCulture, out var lowPrice) ? lowPrice : (decimal?)null,
+        LastPrice = decimal.TryParse(firstTicker.Close, NumberStyles.Any, CultureInfo.InvariantCulture, out var lastPrice) ? lastPrice : (decimal?)null,
+        Volume = decimal.TryParse(firstTicker.Volume, NumberStyles.Any, CultureInfo.InvariantCulture, out var volume) ? volume : (decimal?)null,
+    };
 
-        if (!tickersResult.Success || tickersResult.Data == null || !tickersResult.Data.Data.Any())
-            return new WebCallResult<IEnumerable<Ticker>>(
-                tickersResult.ResponseStatusCode,
-                tickersResult.ResponseHeaders,
-                tickersResult.ResponseTime,
-                tickersResult.ResponseLength,
-                tickersResult.OriginalData,
-                tickersResult.RequestUrl,
-                tickersResult.RequestBody,
-                tickersResult.RequestMethod,
-                tickersResult.RequestHeaders,
-                null,
-                tickersResult.Error);
+    return new WebCallResult<Ticker>(
+        tickerResult.ResponseStatusCode,
+        tickerResult.ResponseHeaders,
+        tickerResult.ResponseTime,
+        tickerResult.ResponseLength,
+        tickerResult.OriginalData,
+        tickerResult.RequestId,
+        tickerResult.RequestUrl,
+        tickerResult.RequestBody,
+        tickerResult.RequestMethod,
+        tickerResult.RequestHeaders,
+        ticker, // Pass the created ticker object
+        tickerResult.Error); // Ensure the error is passed
+}
 
-        var tickers = tickersResult.Data.Data.Select(t => new Ticker
-        {
-            Symbol = t.Symbol,
-            HighPrice = decimal.TryParse(t.High, NumberStyles.Any, CultureInfo.InvariantCulture, out var highPrice) ? highPrice : (decimal?)null,
-            LowPrice = decimal.TryParse(t.Low, NumberStyles.Any, CultureInfo.InvariantCulture, out var lowPrice) ? lowPrice : (decimal?)null,
-            LastPrice = decimal.TryParse(t.Close, NumberStyles.Any, CultureInfo.InvariantCulture, out var lastPrice) ? lastPrice : (decimal?)null,
-            Volume = decimal.TryParse(t.Volume, NumberStyles.Any, CultureInfo.InvariantCulture, out var volume) ? volume : (decimal?)null,
-            // Assuming QuoteVolume and PriceChange information is available or can be derived
-            // QuoteVolume = , 
-            // PriceChange = ,
-            // PriceChangePercent = 
-        }).ToList();
+public async Task<WebCallResult<IEnumerable<Ticker>>> GetTickersAsync(CancellationToken ct = new CancellationToken())
+{
+    var tickersResult = await ExchangeData.GetTickersAsync(ct).ConfigureAwait(false);
 
+    if (!tickersResult.Success || tickersResult.Data == null || !tickersResult.Data.Data.Any())
+    {
         return new WebCallResult<IEnumerable<Ticker>>(
             tickersResult.ResponseStatusCode,
             tickersResult.ResponseHeaders,
             tickersResult.ResponseTime,
             tickersResult.ResponseLength,
             tickersResult.OriginalData,
+            tickersResult.RequestId,
             tickersResult.RequestUrl,
             tickersResult.RequestBody,
             tickersResult.RequestMethod,
             tickersResult.RequestHeaders,
-            tickers,
-            tickersResult.Error);
+            null, // Data is null
+            tickersResult.Error); // Ensure the error is passed
     }
+
+    var tickers = tickersResult.Data.Data.Select(t => new Ticker
+    {
+        Symbol = t.Symbol,
+        HighPrice = decimal.TryParse(t.High, NumberStyles.Any, CultureInfo.InvariantCulture, out var highPrice) ? highPrice : (decimal?)null,
+        LowPrice = decimal.TryParse(t.Low, NumberStyles.Any, CultureInfo.InvariantCulture, out var lowPrice) ? lowPrice : (decimal?)null,
+        LastPrice = decimal.TryParse(t.Close, NumberStyles.Any, CultureInfo.InvariantCulture, out var lastPrice) ? lastPrice : (decimal?)null,
+        Volume = decimal.TryParse(t.Volume, NumberStyles.Any, CultureInfo.InvariantCulture, out var volume) ? volume : (decimal?)null,
+    }).ToList();
+
+    return new WebCallResult<IEnumerable<Ticker>>(
+        tickersResult.ResponseStatusCode,
+        tickersResult.ResponseHeaders,
+        tickersResult.ResponseTime,
+        tickersResult.ResponseLength,
+        tickersResult.OriginalData,
+        tickersResult.RequestId,
+        tickersResult.RequestUrl,
+        tickersResult.RequestBody,
+        tickersResult.RequestMethod,
+        tickersResult.RequestHeaders,
+        tickers, // Pass the created tickers list
+        tickersResult.Error); // Ensure the error is passed
+}
 
     public Task<WebCallResult<IEnumerable<Kline>>> GetKlinesAsync(string symbol, TimeSpan timespan, DateTime? startTime = null, DateTime? endTime = null,
         int? limit = null, CancellationToken ct = new CancellationToken())
@@ -320,12 +332,13 @@ public class AscendEXRestClientSpotApi : RestApiClient, IAscendEXRestClientSpotA
                 orderResult.ResponseTime,
                 orderResult.ResponseLength,
                 orderResult.OriginalData,
+                orderResult.RequestId,
                 orderResult.RequestUrl,
                 orderResult.RequestBody,
                 orderResult.RequestMethod,
                 orderResult.RequestHeaders,
-                null,
-                orderResult.Error);
+                null, // Data is null
+                orderResult.Error); // Ensure the error is passed
 
         var firstOrderData = orderResult.Data.Data.First();
 
@@ -342,18 +355,19 @@ public class AscendEXRestClientSpotApi : RestApiClient, IAscendEXRestClientSpotA
             Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(firstOrderData.LastExecTime).DateTime
         };
 
-        return new WebCallResult<Order>(
-            orderResult.ResponseStatusCode,
-            orderResult.ResponseHeaders,
-            orderResult.ResponseTime,
-            orderResult.ResponseLength,
-            orderResult.OriginalData,
-            orderResult.RequestUrl,
-            orderResult.RequestBody,
-            orderResult.RequestMethod,
-            orderResult.RequestHeaders,
-            order,
-            orderResult.Error);
+            return new WebCallResult<Order>(
+                orderResult.ResponseStatusCode,
+                orderResult.ResponseHeaders,
+                orderResult.ResponseTime,
+                orderResult.ResponseLength,
+                orderResult.OriginalData,
+                orderResult.RequestId,
+                orderResult.RequestUrl,
+                orderResult.RequestBody,
+                orderResult.RequestMethod,
+                orderResult.RequestHeaders,
+                null, // Data is null
+                orderResult.Error); // Ensure the error is passed
     }
 
     public Task<WebCallResult<IEnumerable<UserTrade>>> GetOrderTradesAsync(string orderId, string? symbol = null, CancellationToken ct = new CancellationToken())
@@ -418,20 +432,19 @@ public class AscendEXRestClientSpotApi : RestApiClient, IAscendEXRestClientSpotA
         throw new NotImplementedException();
     }
 
-    internal async Task<WebCallResult<T>> SendRequestInternal<T>(Uri uri, HttpMethod method, CancellationToken cancellationToken,
-        Dictionary<string, object>? parameters = null, bool signed = false, HttpMethodParameterPosition? postPosition = null,
-        ArrayParametersSerialization? arraySerialization = null, int weight = 1, bool ignoreRateLimit = false) where T : class
-    {
-        var result = await SendRequestAsync<T>(uri,
-            method, cancellationToken, parameters, signed,
-            postPosition, arraySerialization, weight,
-            additionalHeaders: new Dictionary<string, string>
-            {
-                { "User-Agent", Guid.NewGuid().ToString() }
-            },
-            ignoreRatelimit: ignoreRateLimit).ConfigureAwait(false);
-        return result;
-    }
+internal async Task<WebCallResult<T>> SendRequestInternal<T>(Uri uri, HttpMethod method, CancellationToken cancellationToken,
+    Dictionary<string, object>? parameters = null, bool signed = false, HttpMethodParameterPosition? postPosition = null,
+    ArrayParametersSerialization? arraySerialization = null, int weight = 1) where T : class
+{
+    var result = await SendRequestAsync<T>(uri,
+        method, cancellationToken, parameters, signed,
+        null, postPosition, arraySerialization, weight,
+        new Dictionary<string, string>
+        {
+            { "User-Agent", Guid.NewGuid().ToString() }
+        }).ConfigureAwait(false);
+    return result;
+}
 
     public Task<WebCallResult<IEnumerable<Balance>>> GetBalancesAsync(string? accountId = null, CancellationToken ct = default)
     {
@@ -554,4 +567,8 @@ public class AscendEXRestClientSpotApi : RestApiClient, IAscendEXRestClientSpotA
         return result.As((IEnumerable<AscendEXOrderHistoryResponse.OrderHistoryData>?)result.Data?.Data);
     }
 
+    public override string FormatSymbol(string baseAsset, string quoteAsset)
+    {
+        throw new NotImplementedException();
+    }
 }

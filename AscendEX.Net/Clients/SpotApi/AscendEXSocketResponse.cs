@@ -2,6 +2,8 @@ using System;
 using Microsoft.Extensions.Logging;
 using CryptoExchange.Net.Sockets;
 using AscendEX.Net.Objects.Internal;
+using CryptoExchange.Net.Objects.Sockets;
+using AscendEX.Net.Objects.Sockets;
 
 namespace AscendEX.Net.Objects.Models.Spot
 {

@@ -1,15 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AscendEX.Net.Enums;
 using AscendEX.Net.Interfaces.Clients.SpotApi;
+using AscendEX.Net.Objects.Internal;
 using AscendEX.Net.Objects.Models;
 using AscendEX.Net.Objects.Options;
+using AscendEX.Net.Objects.Sockets;
 using CryptoExchange.Net;
 using CryptoExchange.Net.Authentication;
+using CryptoExchange.Net.Clients;
+using CryptoExchange.Net.Interfaces;
 using CryptoExchange.Net.Objects;
+using CryptoExchange.Net.Objects.Sockets;
 using CryptoExchange.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -19,6 +25,8 @@ namespace AscendEX.Net.Clients.SpotApi
 {
     public class AscendEXSocketClientSpotApi : SocketApiClient, IAscendEXSocketClientSpotApi
     {
+        private bool _isAuthenticated = false; // Add this line
+
         public string AccountGroup { get; }
         public IAscendEXSocketClientSpotApiTrading Trading { get; }
 
@@ -27,7 +35,6 @@ namespace AscendEX.Net.Clients.SpotApi
         {
             AccountGroup = accountGroup;
             UnhandledMessageExpected = true;
-
             Trading = new AscendEXSocketClientSpotApiTrading(logger, this);
         }
 
@@ -37,118 +44,31 @@ namespace AscendEX.Net.Clients.SpotApi
             _logger.LogInformation("API credentials set: {ApiKey}", credentials.Key.GetString());
         }
 
-        internal async Task<CallResult<UpdateSubscription>> QueryAsync<T>(string url, object request, Action<DataEvent<T>> onData, CancellationToken ct)
-        {
-            _logger.LogInformation($"Attempting to subscribe with request: {JsonConvert.SerializeObject(request)}");
-
-            var result = await base.SubscribeAsync(request, null, true, onData, ct).ConfigureAwait(false);
-
-            if (!result.Success)
-            {
-                _logger.LogError($"Failed to query with error: {result.Error}");
-            }
-            else
-            {
-                _logger.LogInformation("Query successful");
-            }
-
-            return result;
-        }
-
-        public async Task<CallResult<UpdateSubscription>> SubscribeToBarChannelAsync(string symbol, int interval, Action<DataEvent<JToken>> handler, CancellationToken ct = default)
-        {
-            var request = new
-            {
-                op = "sub",
-                id = Guid.NewGuid().ToString(),
-                ch = $"bar:{interval}:{symbol}"
-            };
-            var url = AscendEXEnvironment.Live.GetSocketClientAddress(AccountGroup);
-            return await QueryAsync(url, request, handler, ct).ConfigureAwait(false);
-        }
-
-        public async Task<CallResult<UpdateSubscription>> SubscribeToMarketChannelAsync(string channel, string symbol, Action<DataEvent<JToken>> handler, CancellationToken ct = default)
-        {
-            var request = new
-            {
-                op = "sub",
-                ch = $"{channel}:{symbol}"
-            };
-            var url = AscendEXEnvironment.Live.GetSocketClientAddress(AccountGroup);
-            return await QueryAsync(url, request, handler, ct).ConfigureAwait(false);
-        }
-
-        public async Task<CallResult<UpdateSubscription>> SubscribeToOrderAsync<T>(object request, string identifier, bool authenticated, Action<DataEvent<T>> dataHandler, CancellationToken ct)
-        {
-            var url = AscendEXEnvironment.Live.GetSocketClientAddress(AccountGroup);
-            return await QueryAsync(url, request, dataHandler, ct).ConfigureAwait(false);
-        }
-
-        protected override bool HandleQueryResponse<T>(SocketConnection socketConnection, object request, JToken data, out CallResult<T>? callResult)
-        {
-            callResult = null;
-            return false;
-        }
-
-        protected override bool HandleSubscriptionResponse(SocketConnection socketConnection,
-            SocketSubscription subscription, object request,
-            JToken data, out CallResult<object>? callResult)
-        {
-            _logger.LogInformation($"HandleSubscriptionResponse received data: {data}");
-            callResult = null;
-
-            if (data.Type != JTokenType.Object)
-            {
-                _logger.LogWarning("Received non-object response: {Data}", data);
-                return false;
-            }
-
-            var response = data["m"]?.ToString();
-            if (response != null)
-            {
-                _logger.LogInformation("Subscription response: M = {M}", response);
-
-                if (response == "auth" && data["code"]?.ToString() == "0")
-                {
-                    callResult = new CallResult<object>(new object());
-                    return true;
-                }
-            }
-            else
-            {
-                _logger.LogWarning("Received response could not be deserialized: {Data}", data);
-            }
-
-            return false;
-        }
-
-        protected override bool MessageMatchesHandler(SocketConnection socketConnection, JToken message, object request)
-        {
-            _logger.LogInformation($"MessageMatchesHandler received message: {message}");
-            return true;
-        }
-
-        protected override bool MessageMatchesHandler(SocketConnection socketConnection, JToken message, string identifier)
-        {
-            _logger.LogInformation($"MessageMatchesHandler received message: {message} with identifier: {identifier}");
-            return true;
-        }
-
-        protected override async Task<CallResult<bool>> AuthenticateSocketAsync(SocketConnection socketConnection)
+        public override async Task<CallResult> AuthenticateSocketAsync(SocketConnection socketConnection)
         {
             _logger.LogInformation("Authenticating socket...");
 
             if (ClientOptions.ApiCredentials == null)
             {
                 _logger.LogWarning("No API credentials found.");
-                return new CallResult<bool>(new ServerError("No API credentials found."));
+                return new CallResult(new NoApiCredentialsError());
+            }
+
+            if (!socketConnection.Connected)
+            {
+                _logger.LogInformation("Socket is not connected. Attempting to connect...");
+                var connectResult = await base.ConnectSocketAsync(socketConnection).ConfigureAwait(false);
+                if (!connectResult.Success)
+                {
+                    _logger.LogError("Failed to connect the socket.");
+                    return new CallResult(connectResult.Error);
+                }
+                _logger.LogInformation("Socket connected successfully.");
             }
 
             var authProvider = (AscendEXAuthenticationProvider)CreateAuthenticationProvider(ClientOptions.ApiCredentials);
             var headers = authProvider.AuthenticateSocketParameters();
-            _logger.LogInformation($"AuthRequest: {headers}");
 
-            // Build the authentication request
             var authRequest = new
             {
                 op = "auth",
@@ -158,28 +78,130 @@ namespace AscendEX.Net.Clients.SpotApi
                 sig = headers["x-auth-signature"]
             };
 
-
-            // Convert authRequest to JToken
-            var authRequestJson = JToken.FromObject(authRequest);
-            // Log the authRequestJson and authRequest
             _logger.LogInformation($"AuthRequest: {JsonConvert.SerializeObject(authRequest)}");
-            _logger.LogInformation($"AuthRequestJson: {authRequestJson}");
 
             var sendResult = socketConnection.Send(1, authRequest, 1);
-            if (!sendResult)
+            if (!sendResult.Success)
             {
                 _logger.LogError("Authentication failed.");
-                return new CallResult<bool>(new ServerError("Authentication failed."));
+                return new CallResult(new ServerError("Authentication failed."));
             }
 
+            _isAuthenticated = true;
             _logger.LogInformation("Socket authenticated successfully.");
-            return new CallResult<bool>(true);
+            return new CallResult<Boolean>(true);
         }
 
-        protected override Task<bool> UnsubscribeAsync(SocketConnection connection, SocketSubscription subscriptionToUnsub)
+        internal async Task<CallResult<UpdateSubscription>> QueryAsync(string url, object request, Action<JToken> onData, bool requiresAuth, CancellationToken ct)
         {
-            return Task.FromResult(true);
+            _logger.LogInformation($"Attempting to query with request: {JsonConvert.SerializeObject(request)}");
+
+            // Ensure a connection exists
+            var connectionResult = await GetSocketConnection(url, requiresAuth).ConfigureAwait(false);
+            if (!connectionResult.Success)
+            {
+                return new CallResult<UpdateSubscription>(connectionResult.Error);
+            }
+
+            var connection = connectionResult.Data;
+
+            // Authenticate if necessary
+            if (requiresAuth && ClientOptions.ApiCredentials != null && !_isAuthenticated)
+            {
+                var authResult = await AuthenticateSocketAsync(connection).ConfigureAwait(false);
+                if (!authResult.Success)
+                {
+                    return new CallResult<UpdateSubscription>(authResult.Error);
+                }
+            }
+
+            // Create a new AscendEXSocketQuery
+            var query = new AscendEXSocketQuery<JToken>(_logger, request, requiresAuth)
+            {
+                OnData = onData
+            };
+
+            if (connection.Connected && (!requiresAuth || _isAuthenticated))
+            {
+                _logger.LogInformation("Using existing connection to send the request.");
+                var sendResult = connection.Send(1, request, 1);
+                if (!sendResult.Success)
+                {
+                    _logger.LogError($"Failed to send request with error: {sendResult.Error}");
+                    return new CallResult<UpdateSubscription>(sendResult.Error);
+                }
+
+                _logger.LogInformation("Request sent successfully using existing connection.");
+                return new CallResult<UpdateSubscription>(new UpdateSubscription(connection, query));
+            }
+            else
+            {
+                _logger.LogInformation("No existing connection, subscribing to a new one.");
+                var result = await base.SubscribeAsync(query, ct).ConfigureAwait(false);
+
+                if (!result.Success)
+                {
+                    _logger.LogError($"Failed to query with error: {result.Error}");
+                    return result;
+                }
+
+                _logger.LogInformation("Query successful");
+                return result;
+            }
         }
+
+        public async Task<CallResult<UpdateSubscription>> SubscribeToOrderAsync(object request, string identifier, bool authenticated, Action<JToken> dataHandler, CancellationToken ct)
+        {
+            var url = AscendEXEnvironment.Live.GetSocketClientAddress(AccountGroup);
+            return await QueryAsync(url, request, dataHandler, authenticated, ct).ConfigureAwait(false);
+        }
+
+        public async Task<CallResult<UpdateSubscription>> SubscribeToBarChannelAsync(string symbol, int interval, Action<JToken> handler, CancellationToken ct = default)
+        {
+            var request = new
+            {
+                op = "sub",
+                id = Guid.NewGuid().ToString(),
+                ch = $"bar:{interval}:{symbol}"
+            };
+            var url = AscendEXEnvironment.Live.GetSocketClientAddress(AccountGroup);
+            return await QueryAsync(url, request, handler, false, ct).ConfigureAwait(false);
+        }
+
+        public async Task<CallResult<UpdateSubscription>> SubscribeToMarketChannelAsync(string channel, string symbol, Action<JToken> handler, CancellationToken ct = default)
+        {
+            var request = new
+            {
+                op = "sub",
+                id = Guid.NewGuid().ToString(),
+                ch = $"{channel}:{symbol}"
+            };
+            var url = AscendEXEnvironment.Live.GetSocketClientAddress(AccountGroup);
+            return await QueryAsync(url, request, handler, false, ct).ConfigureAwait(false);
+        }
+
+        public override string? GetListenerIdentifier(IMessageAccessor messageAccessor)
+        {
+            var messageString = messageAccessor.GetOriginalString();
+
+            try
+            {
+                var messageJson = JObject.Parse(messageString);
+                _logger.LogInformation($"Parsed JSON: {messageJson}");
+
+                // Return a unique identifier based on the message content
+                // You can use fields like "op", "id", or any other unique fields
+                return messageJson["id"]?.ToString();
+            }
+            catch (JsonReaderException ex)
+            {
+                _logger.LogError($"Failed to parse message as JSON: {ex.Message}");
+                _logger.LogInformation("Message is not in JSON format.");
+            }
+
+            return null;
+        }
+
 
         protected override AuthenticationProvider CreateAuthenticationProvider(ApiCredentials credentials)
         {
@@ -188,5 +210,11 @@ namespace AscendEX.Net.Clients.SpotApi
 
             throw new ArgumentException("Invalid credentials provided. Expected AscendEXApiCredentials.", nameof(credentials));
         }
+
+        public override string FormatSymbol(string baseAsset, string quoteAsset)
+        {
+            throw new NotImplementedException();
+        }
     }
+
 }

@@ -5,13 +5,14 @@ using System.Security.Cryptography;
 using System.Text;
 using CryptoExchange.Net;
 using CryptoExchange.Net.Authentication;
+using CryptoExchange.Net.Clients;
 using CryptoExchange.Net.Objects;
 
 namespace AscendEX.Net
 {
     public class AscendEXAuthenticationProvider : AuthenticationProvider
     {
-        private new readonly AscendEXApiCredentials _credentials;
+        private readonly AscendEXApiCredentials _credentials;
 
         public AscendEXAuthenticationProvider(AscendEXApiCredentials credentials) : base(credentials)
         {
@@ -20,16 +21,11 @@ namespace AscendEX.Net
 
         public AscendEXAuthenticationProvider(ApiCredentials credentials) : base(credentials)
         {
+            _credentials = credentials as AscendEXApiCredentials ?? throw new ArgumentException("Invalid credentials provided. Expected AscendEXApiCredentials.", nameof(credentials));
         }
 
-        public override void AuthenticateRequest(RestApiClient apiClient, Uri uri, HttpMethod method, Dictionary<string, object> providedParameters, bool auth,
-            ArrayParametersSerialization arraySerialization, HttpMethodParameterPosition parameterPosition,
-            out SortedDictionary<string, object> uriParameters, out SortedDictionary<string, object> bodyParameters, out Dictionary<string, string> headers)
+        public override void AuthenticateRequest(RestApiClient apiClient, Uri uri, HttpMethod method, IDictionary<string, object> uriParameters, IDictionary<string, object> bodyParameters, Dictionary<string, string> headers, bool auth, ArrayParametersSerialization arraySerialization, HttpMethodParameterPosition parameterPosition, RequestBodyFormat requestBodyFormat)
         {
-            uriParameters = parameterPosition == HttpMethodParameterPosition.InUri ? new SortedDictionary<string, object>(providedParameters) : new SortedDictionary<string, object>();
-            bodyParameters = parameterPosition == HttpMethodParameterPosition.InBody ? new SortedDictionary<string, object>(providedParameters) : new SortedDictionary<string, object>();
-            headers = new Dictionary<string, string>();
-
             if (!auth)
                 return;
 
@@ -102,6 +98,7 @@ namespace AscendEX.Net
             var hash = hmacsha256.ComputeHash(Encoding.UTF8.GetBytes(message));
             return Convert.ToBase64String(hash);
         }
+
         public Dictionary<string, string> AuthenticateSocketParameters()
         {
             var timestamp = GetCurrentTimestamp().ToString();

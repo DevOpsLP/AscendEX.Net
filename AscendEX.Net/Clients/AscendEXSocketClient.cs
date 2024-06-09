@@ -5,6 +5,7 @@ using AscendEX.Net.Interfaces.Clients;
 using AscendEX.Net.Interfaces.Clients.SpotApi;
 using AscendEX.Net.Objects.Options;
 using Microsoft.Extensions.Logging;
+using CryptoExchange.Net.Clients;
 
 namespace AscendEX.Net.Clients;
 

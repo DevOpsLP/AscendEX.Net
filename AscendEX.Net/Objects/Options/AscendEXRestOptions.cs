@@ -20,13 +20,7 @@ public class AscendEXRestOptions : RestExchangeOptions<AscendEXEnvironment>
     /// </summary>
     public AscendEXRestApiOptions SpotAndMarginOptions { get; private set; } = new AscendEXRestApiOptions
     {
-        RateLimiters = new List<IRateLimiter>
-        {
-            new RateLimiter()
-                .AddPartialEndpointLimit("/", 200, TimeSpan.FromSeconds(10))
-                //.AddPartialEndpointLimit("/sapi/", 180000, TimeSpan.FromMinutes(1))
-                //.AddEndpointLimit("/api/v3/order", 50, TimeSpan.FromSeconds(10), HttpMethod.Post, true)
-        }
+
     };
     
     internal AscendEXRestOptions Copy()

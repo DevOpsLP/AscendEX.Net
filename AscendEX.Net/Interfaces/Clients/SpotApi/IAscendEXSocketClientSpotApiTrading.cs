@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using AscendEX.Net.Enums;
 using AscendEX.Net.Objects.Models;
 using CryptoExchange.Net.Objects;
+using CryptoExchange.Net.Objects.Sockets;
 using CryptoExchange.Net.Sockets;
 
 namespace AscendEX.Net.Interfaces.Clients.SpotApi

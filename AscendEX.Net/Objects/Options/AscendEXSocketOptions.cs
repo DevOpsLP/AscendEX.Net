@@ -20,12 +20,7 @@ public class AscendEXSocketOptions : SocketExchangeOptions<AscendEXEnvironment>
     /// </summary>
     public AscendEXSocketApiOptions SpotOptions { get; private set; } = new()
     {
-        RateLimiters = new List<IRateLimiter>
-        {
-            new RateLimiter()
-                .AddTotalRateLimit(20, TimeSpan.FromSeconds(1))
-                .AddConnectionRateLimit("wss://ws-feed.exchange.ascendex.com", 5, TimeSpan.FromSeconds(1))
-        }
+
     };
     
     internal AscendEXSocketOptions Copy()
