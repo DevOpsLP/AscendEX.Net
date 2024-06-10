@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using CryptoExchange.Net.RateLimiting.Interfaces; // Ensure this using directive is included
 
 namespace AscendEX.Net.Clients.SpotApi
 {
@@ -16,11 +17,13 @@ namespace AscendEX.Net.Clients.SpotApi
 
         private readonly ILogger _logger;
         private readonly AscendEXRestClientSpotApi _baseClient;
+        private readonly IRateLimitGate _rateLimitGate;
 
         internal AscendEXRestClientSpotApiWallet(ILogger logger, AscendEXRestClientSpotApi baseClient)
         {
             _logger = logger;
             _baseClient = baseClient;
+            _rateLimitGate = AscendEXExchange.RateLimiter.SpotRestIp;
         }
 
         public async Task<WebCallResult<AscendEXDepositAddress>> GetDepositAddressAsync(string asset, string? blockchain = null, CancellationToken ct = default)
@@ -37,7 +40,11 @@ namespace AscendEX.Net.Clients.SpotApi
 
             return await _baseClient.SendRequestInternal<AscendEXDepositAddress>(
                 _baseClient.GetUrl(DepositAddressEndpoint),
-                HttpMethod.Get, ct, parameters, true).ConfigureAwait(false);
+                HttpMethod.Get,
+                cancellationToken: ct,
+                parameters: parameters,
+                signed: true,
+                gate: _rateLimitGate).ConfigureAwait(false);
         }
 
         public async Task<WebCallResult<AscendEXWalletTransactionHistory>> GetWalletTransactionHistoryAsync(string asset, string? blockchain = null, CancellationToken ct = default)
@@ -46,17 +53,19 @@ namespace AscendEX.Net.Clients.SpotApi
             {
                 { "asset", asset }
             };
-                    if (!string.IsNullOrEmpty(blockchain))
-                    {
-                        parameters.Add("blockchain", blockchain);
-                    }
+
+            if (!string.IsNullOrEmpty(blockchain))
+            {
+                parameters.Add("blockchain", blockchain);
+            }
 
             return await _baseClient.SendRequestInternal<AscendEXWalletTransactionHistory>(
                 _baseClient.GetUrl(WalletTransactionHistoryEndpoint),
-                HttpMethod.Get, ct, parameters, true).ConfigureAwait(false);
+                HttpMethod.Get,
+                cancellationToken: ct,
+                parameters: parameters,
+                signed: true,
+                gate: _rateLimitGate).ConfigureAwait(false);
         }
-
     }
-
-
 }
