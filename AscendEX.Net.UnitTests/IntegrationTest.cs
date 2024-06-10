@@ -12,6 +12,8 @@ using AscendEX.Net;
 using AscendEX.Net.Enums;
 using AscendEX.Net.Objects.Models;
 using Newtonsoft.Json.Linq;
+using AscendEX.Net.Clients;
+using Newtonsoft.Json;
 
 public class AscendEXSocketTests
 {
@@ -35,47 +37,17 @@ public class AscendEXSocketTests
 
         var accountGroup = "4"; // Replace with actual account group if needed
         var accountCategory = "cash"; // Example account category
-        var logger = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug)).CreateLogger<AscendEXSocketClientSpotApi>();
-        var clientOptions = new AscendEXSocketOptions
+        var logger = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug)).CreateLogger<AscendEXRestClient>();
+        var client = new AscendEXRestClient(options =>
         {
-            ApiCredentials = new AscendEXApiCredentials(apiKey, apiSecret)
-        };
-        var client = new AscendEXSocketClientSpotApi(logger, clientOptions, accountGroup);
+            options.ApiCredentials = new AscendEXApiCredentials(apiKey, apiSecret);
+        });
 
-        _logger.LogInformation("Starting test for placing an order via WebSocket");
+        var accountInfo = await client.SpotApi.Account.GetAccountInfoAsync();
 
-        try
-        {
-            var symbol = "BTC/USDT";
-            var side = OrderSide.Buy;
-            var orderType = OrderType.Limit;
-            var quantity = 0.00016m;
-            var price = "55000";
-            var clientOrderId = Guid.NewGuid().ToString();
-            var stopPrice = (string?)null;
-            var timeInForce = (string?)null;
-            var respInst = "ACK";
-            var ct = new CancellationToken();
 
-            var result = await client.Trading.PlaceOrderAsync(
-                accountCategory,
-                symbol,
-                side,
-                orderType,
-                quantity,
-                price,
-                stopPrice,
-                timeInForce,
-                respInst,
-                ct);
+        var accountInfoJson = JsonConvert.SerializeObject(accountInfo, Formatting.Indented);
 
-            _logger.LogInformation("Order placed successfully: {OrderId}", result.Data);
-            await Task.Delay(30000);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Exception occurred during order placement test: {Exception}", ex);
-            throw;
-        }
+        _logger.LogInformation("Account info: {accountInfo}", accountInfoJson);
     }
 }
