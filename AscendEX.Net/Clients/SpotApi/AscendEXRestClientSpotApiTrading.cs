@@ -5,6 +5,7 @@ using AscendEX.Net.Objects;
 using AscendEX.Net.Objects.Models;
 using CryptoExchange.Net;
 using CryptoExchange.Net.Objects;
+using CryptoExchange.Net.RateLimiting.Interfaces; // Ensure this using directive is included
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.Collections.Generic;
@@ -19,11 +20,13 @@ namespace AscendEX.Net.Clients.SpotApi
     {
         private readonly AscendEXRestClientSpotApi _baseClient;
         private readonly ILogger _logger;
+        private readonly IRateLimitGate _rateLimitGate;
 
         internal AscendEXRestClientSpotApiTrading(ILogger logger, AscendEXRestClientSpotApi baseClient)
         {
             _baseClient = baseClient;
             _logger = logger;
+            _rateLimitGate = AscendEXExchange.RateLimiter.SpotRestIp;
         }
 
         public async Task<WebCallResult<AscendEXOpenOrdersResponse>> GetOpenOrdersAsync(int accountGroup, string accountCategory, string? symbol = null, CancellationToken ct = default)
@@ -38,10 +41,12 @@ namespace AscendEX.Net.Clients.SpotApi
 
             return await _baseClient.SendRequestInternal<AscendEXOpenOrdersResponse>(
                 _baseClient.GetUrl(endpoint),
-                HttpMethod.Get, ct, parameters, true).ConfigureAwait(false);
+                HttpMethod.Get,
+                cancellationToken: ct,
+                parameters: parameters,
+                signed: true,
+                gate: _rateLimitGate).ConfigureAwait(false);
         }
-
-
 
         public async Task<WebCallResult<AscendEXCancelAllOrders>> CancelAllOrdersAsync(int accountGroup, string accountCategory, string? symbol = null, CancellationToken ct = default)
         {
@@ -55,7 +60,11 @@ namespace AscendEX.Net.Clients.SpotApi
 
             return await _baseClient.SendRequestInternal<AscendEXCancelAllOrders>(
                 _baseClient.GetUrl(endpoint),
-                HttpMethod.Delete, ct, parameters, signed: true).ConfigureAwait(false);
+                HttpMethod.Delete,
+                cancellationToken: ct,
+                parameters: parameters,
+                signed: true,
+                gate: _rateLimitGate).ConfigureAwait(false);
         }
 
         internal async Task<WebCallResult<AscendEXOrderResponse>> PlaceOrderInternal(
@@ -75,13 +84,13 @@ namespace AscendEX.Net.Clients.SpotApi
         {
             var endpoint = $"/{accountGroup}/api/pro/v1/{accountCategory}/order";
             var parameters = new Dictionary<string, object>
-    {
-        { "symbol", symbol },
-        { "side", JsonConvert.SerializeObject(side, new OrderSideConverter(false)) },
-        { "orderType", JsonConvert.SerializeObject(type, new OrderTypeConverter(false)) },
-        { "orderQty", quantity?.ToString(CultureInfo.InvariantCulture) },
-        { "time", time?.ToString() }
-    };
+            {
+                { "symbol", symbol },
+                { "side", JsonConvert.SerializeObject(side, new OrderSideConverter(false)) },
+                { "orderType", JsonConvert.SerializeObject(type, new OrderTypeConverter(false)) },
+                { "orderQty", quantity?.ToString(CultureInfo.InvariantCulture) },
+                { "time", time?.ToString() }
+            };
 
             parameters.AddOptionalParameter("id", clientOrderId);
             parameters.AddOptionalParameter("orderPrice", price);
@@ -91,9 +100,12 @@ namespace AscendEX.Net.Clients.SpotApi
 
             return await _baseClient.SendRequestInternal<AscendEXOrderResponse>(
                 _baseClient.GetUrl(endpoint),
-                HttpMethod.Post, ct, parameters, true).ConfigureAwait(false);
+                HttpMethod.Post,
+                cancellationToken: ct,
+                parameters: parameters,
+                signed: true,
+                gate: _rateLimitGate).ConfigureAwait(false);
         }
-
 
         public async Task<WebCallResult<AscendEXOrderResponse>> PlaceOrderAsync(
             int accountGroup,
@@ -138,7 +150,11 @@ namespace AscendEX.Net.Clients.SpotApi
 
             return await _baseClient.SendRequestInternal<AscendEXOrderStatusResponse>(
                 _baseClient.GetUrl(endpoint),
-                HttpMethod.Get, ct, parameters).ConfigureAwait(false);
+                HttpMethod.Get,
+                cancellationToken: ct,
+                parameters: parameters,
+                signed: true,
+                gate: _rateLimitGate).ConfigureAwait(false);
         }
 
         public async Task<WebCallResult<AscendEXCancelOrder>> CancelOrderAsync(int accountGroup, string accountCategory, string orderId, string symbol, string? id = null, CancellationToken ct = default)
@@ -146,11 +162,11 @@ namespace AscendEX.Net.Clients.SpotApi
             var endpoint = $"/{accountGroup}/api/pro/v1/{accountCategory}/order";
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
             var parameters = new Dictionary<string, object>
-    {
-        { "orderId", orderId },
-        { "symbol", symbol },
-        { "time", timestamp }
-    };
+            {
+                { "orderId", orderId },
+                { "symbol", symbol },
+                { "time", timestamp }
+            };
 
             if (!string.IsNullOrEmpty(id))
             {
@@ -159,20 +175,28 @@ namespace AscendEX.Net.Clients.SpotApi
 
             return await _baseClient.SendRequestInternal<AscendEXCancelOrder>(
                 _baseClient.GetUrl(endpoint),
-                HttpMethod.Delete, ct, parameters, true).ConfigureAwait(false);
+                HttpMethod.Delete,
+                cancellationToken: ct,
+                parameters: parameters,
+                signed: true,
+                gate: _rateLimitGate).ConfigureAwait(false);
         }
 
         public async Task<WebCallResult<AscendEXBatchOrderResponse>> PlaceBatchOrdersAsync(int accountGroup, string accountCategory, IEnumerable<AscendEXBatchOrder> orders, CancellationToken ct = default)
         {
             var endpoint = $"/{accountGroup}/api/pro/v1/{accountCategory}/order/batch";
             var parameters = new Dictionary<string, object>
-    {
-        { "orders", orders }
-    };
+            {
+                { "orders", orders }
+            };
 
             return await _baseClient.SendRequestInternal<AscendEXBatchOrderResponse>(
                 _baseClient.GetUrl(endpoint),
-                HttpMethod.Post, ct, parameters, true).ConfigureAwait(false);
+                HttpMethod.Post,
+                cancellationToken: ct,
+                parameters: parameters,
+                signed: true,
+                gate: _rateLimitGate).ConfigureAwait(false);
         }
 
         public async Task<WebCallResult<AscendEXCurrentOrderHistoryResponse>> GetCurrentOrderHistoryAsync(int accountGroup, string accountCategory, int? n = null, string symbol = null, bool? executedOnly = null, CancellationToken ct = default)
@@ -197,7 +221,11 @@ namespace AscendEX.Net.Clients.SpotApi
 
             return await _baseClient.SendRequestInternal<AscendEXCurrentOrderHistoryResponse>(
                 _baseClient.GetUrl(endpoint),
-                HttpMethod.Get, ct, parameters, true).ConfigureAwait(false);
+                HttpMethod.Get,
+                cancellationToken: ct,
+                parameters: parameters,
+                signed: true,
+                gate: _rateLimitGate).ConfigureAwait(false);
         }
 
         public async Task<WebCallResult<AscendEXOrderHistoryResponse>> GetOrderHistoryAsync(
@@ -205,9 +233,9 @@ namespace AscendEX.Net.Clients.SpotApi
         {
             var endpoint = $"api/pro/data/v2/order/hist";
             var parameters = new Dictionary<string, object>
-        {
-            { "account", account }
-        };
+            {
+                { "account", account }
+            };
 
             if (!string.IsNullOrEmpty(symbol)) parameters.Add("symbol", symbol);
             if (startTime.HasValue) parameters.Add("startTime", startTime.Value);
@@ -217,8 +245,11 @@ namespace AscendEX.Net.Clients.SpotApi
 
             return await _baseClient.SendRequestInternal<AscendEXOrderHistoryResponse>(
                 _baseClient.GetUrl(endpoint),
-                HttpMethod.Get, ct, parameters, true).ConfigureAwait(false);
+                HttpMethod.Get,
+                cancellationToken: ct,
+                parameters: parameters,
+                signed: true,
+                gate: _rateLimitGate).ConfigureAwait(false);
         }
-
     }
 }
